@@ -1,0 +1,201 @@
+\documentclass[a4paper,10pt,english]{article}
+\usepackage[T1]{fontenc}
+\usepackage{libertine}
+\usepackage[libertine]{newtxmath}
+\usepackage{fullpage}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{fancyvrb}
+\usepackage{xcolor}
+\definecolor{dark-red}{rgb}{0.4,0.15,0.15}
+\definecolor{dark-blue}{rgb}{0.15,0.15,0.4}
+\definecolor{medium-blue}{rgb}{0,0,0.5}
+\hypersetup{
+  colorlinks, linkcolor={dark-red},
+  citecolor={dark-blue}, urlcolor={medium-blue}
+}
+
+\title{\textsc{ShengBTE}: a solver for the Boltzmann transport equation for phonons}
+\author{
+  Wu Li\\\href{mailto:wu.li@cea.fr}{\nolinkurl{wu.li@cea.fr}}
+  \and
+  Jes\'us Carrete\\\href{mailto:jcarrete@gmail.com}{\nolinkurl{jcarrete@gmail.com}}
+  \and
+  Nebil A. Katcho\\\href{mailto:nebil.ayapekatcho@cea.fr}{\nolinkurl{nebil.ayapekatcho@cea.fr}}
+  \and
+  Natalio Mingo\\\href{mailto:natalio.mingo@cea.fr}{\nolinkurl{natalio.mingo@cea.fr}}
+}
+\date{}
+
+\begin{document}
+\maketitle
+
+\tableofcontents
+\newpage
+
+%\section{Introduction and methods}
+
+\section{How to download, compile and use \textsc{ShengBTE}}
+
+Development of \textsc{ShengBTE} is hosted at \href{http://www.bitbucket.org}{\nolinkurl{Bitbucket}}. The latest version can be downloaded using the ``download'' link at \url{https://bitbucket.org/sousaw/shengbte}. Alternatively, it is possible to clone its \href{http://git-scm.com/}{\nolinkurl{GIT}} repository from the command line with
+
+\begin{verbatim}
+git clone git@bitbucket.org/sousaw/shengbte.git ShengBTE
+\end{verbatim}
+
+\noindent or from one of the many graphical frontends available.
+
+To compile the code it is enough to run \texttt{make} in the \texttt{Src} subdirectory of the distribution, but a suitable \texttt{arch.make} must be present in that directory. An example is provided as \texttt{Src/arch.make.example}. As a minimum, \texttt{\$MPIFC} must contain a valid command to compile Fortran 90 code with MPI directives, while the combination of \texttt{\$LDFLAGS} and \texttt{\$LIBS} must contain any linker flags required in order to link against an implementation of \textsc{Lapack} and against Atsushi Togo's \href{http://spglib.sourceforge.net/}{\nolinkurl{spglib}}.
+
+After compilation succeeds, a \texttt{ShengBTE} binary will be created in the root directory of the distribution. This executable takes no command-line options and accepts no input from the terminal. It can be invoked simply as
+
+\begin{verbatim}
+./ShengBTE
+\end{verbatim}
+
+\noindent for serial mode, but most often it will be run using a command like
+
+\begin{verbatim}
+mpirun -n 32 ./ShengBTE 2>BTE.err >BTE.out
+\end{verbatim}
+
+\noindent often as part of a script to be submitted to a batch system.
+
+\section{Input files}
+
+Exactly three files are required for a \textsc{ShengBTE} run: \texttt{CONTROL}, one of \texttt{FORCE\_CONSTANTS\_2ND} or \texttt{espresso.ifc2}, and \texttt{FORCE\_CONSTANTS\_3RD}. Their contents are detailed below; for a complete example, the reader is referred to the \texttt{Test} subdirectory of the distribution.
+
+\subsection{The \texttt{CONTROL} file}
+
+The contents of this file describe the system to be studied and specify a set of parameters and flags controlling execution. Its format is merely a sequence of four Fortran \href{http://publib.boulder.ibm.com/infocenter/lnxpcomp/v8v101/index.jsp?topic=%2Fcom.ibm.xlf101l.doc%2Fxlflr%2Fnamelistio.htm}{\nolinkurl{namelists}}, with a reasonably flexible syntax that should become apparent after looking at the example \texttt{Test/CONTROL} for zincblence InAs. Some parameters and flags are mandatory, whereas others are optional and take a default value when unspecified.
+
+\begin{description}
+\item[\texttt{\&allocations} namelist:]\hfill
+  \begin{itemize}
+    \item\texttt{nelements} (integer, mandatory): number of different elements in the compound
+    \item\texttt{natoms} (integer, mandatory): number of atoms in the unit cell
+    \item\texttt{ngrid} (integer, $3$, mandatory): number of grid planes along each axis in reciprocal space
+    \item\texttt{norientations} (integer, default=0): number of orientations along which to study nanowires
+  \end{itemize}
+\item[\texttt{\&crystal} namelist:]\hfill
+  \begin{itemize}
+  \item\texttt{lfactor} (real, $\mathrm{nm}$, default=$1.0$): unit of measurement for lattice vectors
+  \item\texttt{lattvec} (real, $3\times 3$, mandatory): real-space lattice vectors, in units of \texttt{lfactor}
+  \item\texttt{types} (integer, $\mathtt{natoms}$, mandatory): a vector of \texttt{natom} integers, ranging from $1$ to \texttt{nelements}, assigning an element to each atom in the system
+  \item\texttt{elements} (string, $\mathtt{nelements}$, mandatory): a vector of element names
+  \item\texttt{positions} (real, $3\times \mathtt{natoms}$, mandatory): atomic positions in lattice coordinates
+  \item\texttt{masses} (real, $\mathtt{nelements}$, $\mathrm{g/mol}$, default=automatic): atomic masses corresponding to each element. If they are omitted and \texttt{autoisotopes} is true and the element names are known, they are computed automatically.
+  \item\texttt{gfactors} (real, $\mathtt{nelements}$, default=automatic): $g$ factors for isotopic scattering associated to each element. If they are omitted and \texttt{autoisotopes} is true and the element names are known, they are computed automatically.
+  \item\texttt{epsilon} (real, $3\times 3$, $\epsilon_0$, default=$\mathbf{1}$): dielectric tensor of the system in the Cartesian basis
+  \item\texttt{born} (real, $3\times 3\times\mathtt{natoms}$, $e$, default=$\mathbf{0}$): Born effective charge tensor of each atom in the Cartesian basis
+  \item\texttt{scell} (integer, $3$, mandatory): supercell sizes along each crystal axis used for the 2nd-order force constant calculation
+  \item\texttt{orientations} (integer, $3\times\mathtt{norientations}$, mandatory unless $\mathtt{norientations}=0$): terns of integer indices defining the crystallographic directions along which to study nanowires
+  \end{itemize}
+\item[\texttt{\&parameters} namelist:]\hfill
+  \begin{itemize}
+    \item\texttt{T} (real, $\mathrm{K}$, mandatory): temperature to be used in all calculations
+    \item\texttt{scalebroad} (real, default=$1.0$): scale parameter for Gaussian smearing. The default is theoretically guaranteed to work, but significant speedups can sometimes be achieved by reducing it, with negligible loss of precision.
+    \item\texttt{rmin} (real, $\mathrm{nm}$, default=$5.0$): minimum radius of nanowires whose thermal conductivity will be computed
+    \item\texttt{rmax} (real, $\mathrm{nm}$, default=$505.0$): maximum radius of nanowires whose thermal conductivity will be computed
+    \item\texttt{dr} (real, $\mathrm{nm}$, default=$100.0$): radius increment to be used when simulating nanowires from \texttt{rmin} to \texttt{rmax}
+    \item\texttt{maxiter} (integer, default=$1000$): maximum number of iterations allowed in the BTE convergence process
+    \item\texttt{nticks} (integer, default=$100$): number of different values of the mean free path at which to compute the cumulative thermal conductivity
+    \item\texttt{eps} (real, default=$10^{-5}$): the iterative solver of the BTE will stop when the relative change in the thermal conductivity tensor is less than \texttt{eps}. Such change between steps $n-1$ and $n$ is measured as $\left\vert\left\vert\mathbf{\kappa}_n-\mathbf{\kappa}_{n-1}\right\vert\right\vert/\left\vert\left\vert\mathbf{\kappa}_{n-1}\right\vert\right\vert$, where $\left\vert\left\vert\cdot\right\vert\right\vert$ denotes a matrix $2$-norm.
+  \end{itemize}
+\item[\texttt{\&flags} namelist:]\hfill
+  \begin{itemize}
+    \item\texttt{nonanalytic} (logical, default=$.\mathtt{true}.$): compute and use the nonanalytic part of the dynamical matrix
+    \item\texttt{convergence} (logical, default=$.\mathtt{true}.$): if true, iterate the BTE solver until convergence is achieved. If false, compute thermal conductivities in the relaxation time approximation.
+    \item\texttt{isotopes} (logical, default=$.\mathtt{true}.$): include isotopic scattering in the relaxation times
+    \item\texttt{autoisotopes} (logical, default=$.\mathtt{true}.$): compute atomic masses and $g$ factors automatically
+    \item\texttt{nanowires} (logical, default=$.\mathtt{false}.$): study the thermal conductivity of nanowires in addition to that of the bulk
+    \item\texttt{onlyharmonic} (logical, default=$.\mathtt{false}.$): stop the program after computing the specific heat and small-grain thermal conductivity
+    \item\texttt{espresso} (logical, default=$.\mathtt{false}.$): read second-order force constants from \texttt{espresso.ifc2} (Quantum Espresso format) instead of the default \texttt{FORCE\_CONSTANTS\_2ND} (Phonopy format)
+  \end{itemize}
+\end{description}
+
+\subsection{The \texttt{FORCE\_CONSTANTS\_2ND} file}
+
+This file contains the second derivatives of the system's energy with respect to the Cartesian coordinates of the nuclei, \textit{i.e.} the interatomic force constant matrix. Its format is precisely that chosen in  \href{http://phonopy.sourceforge.net/}{\nolinkurl{Phonopy}} for the \texttt{FORCE\_CONSTANTS} file, so that the result of a Phonopy calculation can be used directly. The first line of the file declares the total number of atoms in the supercell, \texttt{npairs}, which must be equal to $\mathtt{scell}\left(1\right)\times\mathtt{scell}\left(2\right)\times\mathtt{scell}\left(3\right)\times\mathtt{natoms}$, and is followed by \texttt{npairs} blocks of four lines each. The first line of each of those blocks contains two integers with the $1$-based indices of the atoms forming the pair; the remaining three lines contain the $3\times 3$ matrix of second-order interatomic force constants linking those two atoms, in $\mathrm{eV/\AA^2}$.
+
+\subsection{The \texttt{espresso.ifc2} file}
+
+The information contained in this file is equivalent to that in \texttt{FORCE\_CONSTANTS\_2ND}, but the format is different. For details, consult the \href{http://www.quantum-espresso.org/}{\nolinkurl{Quantum} \nolinkurl{Espresso}} documentation. Please note that although this file's header contains information about lattice vectors, atomic positions, Born effective charges and so forth, it is ignored by \textsc{ShengBTE}. It is the user's responsibility to ensure that \texttt{espresso.ifc2} and \texttt{CONTROL} are compatible.
+
+\subsection{The \texttt{FORCE\_CONSTANTS\_3RD} file}
+
+Similarly, this file contains the third-order interatomic force constant matrix, but uses a sparse description to save space. All constants are implicitily refered to a central unit cell $i$ taken as the origin of coordinates. The first line again contains a single integer, \texttt{nb}, which is followed by \texttt{nb} blocks with the following structure:
+
+\begin{itemize}
+\item A blank line
+\item A $1$-based sequential index
+\item A line with the Cartesian coordinates of the second unit cell in $\mathrm{\AA}$.
+\item A line with the Cartesian coordinates of the third unit cell in $\mathrm{\AA}$.
+\item A line with the $1$-based indices of the three atoms involved, each from $1$ to $\mathtt{natoms}$.
+\item $27$ lines, each of which starts with a tern of integers specifying three Cartesian axes and is completed by a force constant in $\mathrm{eV/\AA^3}$. The last element of the tern changes first.
+\end{itemize}
+
+The following is an example of one such block:
+
+\begin{Verbatim}
+  
+  1
+  0.000  0.000  0.000
+  0.000  0.000  0.000
+  1 1 1
+  1 1 1    0.0000000000E+00
+  1 1 2    0.0000000000E+00
+  1 1 3    0.0000000000E+00
+  1 2 1    0.0000000000E+00
+  1 2 2    0.0000000000E+00
+  1 2 3    0.2346653425E+02
+  1 3 1    0.0000000000E+00
+  1 3 2    0.2346653425E+02
+  1 3 3    0.0000000000E+00
+  2 1 1    0.0000000000E+00
+  2 1 2    0.0000000000E+00
+  2 1 3    0.2346653425E+02
+  2 2 1    0.0000000000E+00
+  2 2 2    0.0000000000E+00
+  2 2 3    0.0000000000E+00
+  2 3 1    0.2346653425E+02
+  2 3 2    0.0000000000E+00
+  2 3 3    0.0000000000E+00
+  3 1 1    0.0000000000E+00
+  3 1 2    0.2346653425E+02
+  3 1 3    0.0000000000E+00
+  3 2 1    0.2346653425E+02
+  3 2 2    0.0000000000E+00
+  3 2 3    0.0000000000E+00
+  3 3 1    0.0000000000E+00
+  3 3 2    0.0000000000E+00
+  3 3 3    0.0000000000E+00
+\end{Verbatim}
+
+\section{Output files}
+
+Many files are created during a successful run of \textsc{ShengBTE}. They contain not only the thermal conductivity and related quantities, but also a set of intermediate results that may be useful to diagnose problems. This section includes a brief description of their contents.
+
+\begin{description}
+\item[\texttt{BTE.qpoints}:] the first column in this file contains the indices of a set of irreducible $q$-points in the Brillouin zone obtained starting with an $\mathtt{ngrid\left(1\right)}\times\mathtt{ngrid\left(2\right)}\times\mathtt{ngrid\left(3\right)}$ Monkhorst-Pack grid. The second column lists the corresponding degeneracies. The remaining three columns are the Cartesian coordinates of a representative $q$-point in each equivalence class.
+\item[\texttt{BTE.omega}:] phonon angular frequencies at each of those $q$-points, in $\mathrm{rad/ps}$
+\item[\texttt{BTE.v}:] group velocities of those modes, in $\mathrm{km/s}$ (or $\mathrm{nm}\,\mathrm{THz}$)
+\item[\texttt{BTE.cv}:] specific heat of the system, in $\mathrm{J/\left(m^3\,K\right)}$
+\item[\texttt{BTE.kappa\_sg}:] thermal conductivity per unit of mean free path in the small-grain limit, in $\mathrm{W/\left(m\,K\,nm\right)}$
+\item[\texttt{BTE.dos}:] the second column of this file contains the phonon density of stated evaluated at the angular frequencies (in $\mathrm{rad/ps}$) specified by its first column
+\item[\texttt{BTE.pdos}:] the second and further column of this file contains the phonon density of stated evaluated at the angular frequencies (in $\mathrm{rad/ps}$) specified by its first column and projected over each atom in the unit cell
+\item[\texttt{BTE.P3}]: volume in phase space available for three-phonon processes, for each irreducible $q$-point and phonon band
+\item[\texttt{BTE.P3\_total}:] sum of all the contributions in \texttt{BTE.P3}, total volume in phase space available for three-phonon processes.
+\item[\texttt{BTE.w\_isotopic}:] isotopic contribution to the scattering rate, for each $q$-point and each band, in $\mathrm{ps^{-1}}$
+\item[\texttt{BTE.w\_anharmonic}:] contribution of three-phonon processes to the scattering rate, for each $q$-point and each band, in $\mathrm{ps^{-1}}$
+\item[\texttt{BTE.w}:] total zeroth-order scattering rate for each $q$-point and each band, in $\mathrm{ps^{-1}}$
+\item[\texttt{BTE.w\_final}:] total converged scattering rate for each $q$-point and each band, in $\mathrm{ps^{-1}}$
+\item[\texttt{BTE.kappa}:] tensorial contribution to the thermal conductivity from each band, in $\mathrm{W/\left(m\,K\right)}$. The last line contains converged values, the rest show the convergence process.
+\item[\texttt{BTE.kappa\_tensor}:] total thermal conductivity, a $3\times 3$ tensor expressed in $\mathrm{W/\left(m\,K\right)}$. The last line contains converged values, the rest show the convergence process.
+\item[\texttt{BTE.kappa\_scalar}:] average of diagonal elements of the thermal conductivity tensor, in $\mathrm{W/\left(m\,K\right)}$. The last line contains converged values, the rest show the convergence process.
+\item[\texttt{BTE.kappa\_nw\_*}:] thermal conductivities of nanowires built along different directions of the bulk material, for different radii. The first column in each file is a diameter, the following $3\times\mathtt{natoms}$ contain the contributions of each band and the last column contains the total thermal conductivity. Diameters are expressed in $\mathrm{nm}$ and conductivities in $\mathrm{W/\left(m\,K\right)}$
+\item[\texttt{BTE.kappa\_nw\_*\_lower}:] lower bounds to the thermal conductivities of nanowires built along different directions of the bulk material, for different radii. The first column in each file is a diameter, the following $3\times\mathtt{natoms}$ contain the contributions of each band and the last column contains the total thermal conductivity. Diameters are expressed in $\mathrm{nm}$ and conductivities in $\mathrm{W/\left(m\,K\right)}$. Each lower bound is estimated by using the set of zeroth-order bulk relaxation times.
+\item[\texttt{BTE.cumulative\_kappa\_*}:] this set of files is analogous to \texttt{BTE.kappa*}, except in that their first column specifies a cutoff mean free path for phonons.
+\end{description}
+
+\end{document}

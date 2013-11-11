@@ -1,0 +1,12 @@
+arch.make
+ShengBTE
+*.o
+*.a
+*.so
+*.mod
+*__genmod.f90
+*.pyc
+*.pyo
+*~
+Test/*
+Doc/*

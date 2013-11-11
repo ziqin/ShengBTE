@@ -1,0 +1,21 @@
+include arch.make
+
+objects:=conductivity.o config.o data.o input.o iterations.o misc.o phonon_routines.o integrals.o processes.o scaling.o symmetry.o wedgetc.o ShengBTE.o
+
+all: ../ShengBTE
+../ShengBTE: $(objects)
+	$(MPIFC) $(FFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+conductivity.o conductivity.mod: config.mod data.mod
+config.o config.mod:  misc.mod data.mod symmetry.mod
+input.o input.mod:  config.mod
+iterations.o iterations.mod: data.mod config.mod wedgetc.mod
+phonon_routines.o phonon_routines.mod: data.mod config.mod input.mod
+processes.o processes.mod:  data.mod config.mod
+scaling.o scaling.mod: config.mod data.mod
+wedgetc.o wedgetc.mod: symmetry.mod config.mod misc.mod
+ShengBTE.o: config.mod input.mod processes.mod iterations.mod conductivity.mod scaling.mod phonon_routines.mod wedgetc.mod integrals.mod
+%.o %.mod: %.f90
+	$(MPIFC) $(FFLAGS) -c -o $*.o $<
+	touch $*.mod
+clean:
+	rm -f ../ShengBTE *.mod *.o
