@@ -1,5 +1,5 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li@cea.fr>
+!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
 !  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
 !  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
 !  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
