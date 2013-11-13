@@ -167,7 +167,6 @@ contains
     rV=2.*pi/V
     rlattvec=rV*rlattvec
     V=abs(V)
-    rV=4*pi*pi*abs(rV)
     do i=1,3
        dq(i)=dnrm2(3,rlattvec(i,:),1)/ngrid(i)
     end do
