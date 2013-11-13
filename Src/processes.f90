@@ -76,8 +76,7 @@ contains
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*dnrm2(&
                         3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/&
-                        (1.4*(4.*V)**(1./3.))
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(2.)
                    if (abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus=N_plus+1
                    endif
@@ -92,8 +91,7 @@ contains
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*dnrm2(&
                         3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/&
-                        (1.4*(4.*V)**(1./3.))
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(2.)
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       N_minus=N_minus+1
                    endif
@@ -157,8 +155,7 @@ contains
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*dnrm2(&
                         3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/&
-                        (1.4*(4.*V)**(1./3.))
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(2.)
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus_count=N_plus_count+1
                       Indof2ndPhonon_plus(N_plus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
@@ -255,8 +252,7 @@ contains
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*dnrm2(&
                         3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/&
-                        (1.4*(4.*V)**(1./3.))
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(2.)
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       N_minus_count=N_minus_count+1
                       Indof2ndPhonon_minus(N_minus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
@@ -338,8 +334,7 @@ contains
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*dnrm2(&
                         3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/&
-                        (1.4*(4.*V)**(1./3.))
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(2.)
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus_count=N_plus_count+1
                       P3_plus(N_plus_count)=exp(-(omega+omegap-omegadp)**2/(sigma**2))/&
