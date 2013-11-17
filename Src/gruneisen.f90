@@ -17,7 +17,7 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-! Contains a routine to compute the mode Grüneisen parameters.
+! Subroutines and functions related to Grüneisen parameters.
 module gruneisen
   use data
   use config
@@ -26,6 +26,7 @@ module gruneisen
 
 contains
 
+  ! Subroutine to compute the mode Grüneisen parameters.
   subroutine mode_grun(omega,eigenvect,Ntri,Phi,&
        R_j,R_k,Index_i,Index_j,Index_k,grun)
     implicit none
@@ -75,4 +76,29 @@ contains
        grun(ik,:)=real(g)
     end do
   end subroutine mode_grun
+
+  ! Obtain the total Grüneisen parameter as a weighted sum over modes.
+  function total_grun(omega,grun)
+    implicit none
+    real(kind=8),intent(in) :: omega(nptk,nbands),grun(nptk,nbands)
+
+    integer(kind=4) :: ii,jj
+    real(kind=8) :: total_grun,weight,dBE,x
+
+    total_grun=0.
+    weight=0.
+    do jj=1,nbands
+       do ii=1,nptk
+          x=hbar*omega(ii,jj)/(2.*kB*T)
+          if(x.eq.0.) then
+             dBE=1.
+          else
+             dBE=(x/sinh(x))**2.
+          end if
+          weight=weight+dBE
+          total_grun=total_grun+dBE*grun(ii,jj)
+       end do
+    end do
+    total_grun=total_grun/weight
+  end function total_grun
 end module gruneisen

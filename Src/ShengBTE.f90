@@ -261,6 +261,9 @@ program ShengBTE
         write(1,"("//trim(adjustl(aux))//"E20.10)") grun(list(ll),:)
      end do
      close(1)
+     open(1,file="BTE.gruneisen_total",status="replace")
+     write(1,*) total_grun(energy,grun)
+     close(1)
   end if
   deallocate(grun)
 
