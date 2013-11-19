@@ -48,8 +48,6 @@ contains
     real(kind=8) :: omega,omegap,omegadp ! omega of the first, second
                                          ! and third phonon
 
-    real(kind=8) :: dnrm2
-
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
@@ -74,9 +72,9 @@ contains
                 qdprime=modulo(qdprime,Ngrid)
                 omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*dnrm2(&
-                        3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(6.)
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if (abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus=N_plus+1
                    endif
@@ -89,9 +87,9 @@ contains
                 qdprime=modulo(qdprime,Ngrid)
                 omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*dnrm2(&
-                        3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(6.)
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       N_minus=N_minus+1
                    endif
@@ -125,8 +123,6 @@ contains
     real(kind=8) :: realqprime(3),realqdprime(3)
     complex(kind=8) :: Vp,Vp0,prefactor ! The expression of Vp can be found in Natalio's book chapter.
 
-    real(kind=8) :: dnrm2
-
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
@@ -153,9 +149,9 @@ contains
                 realqdprime=matmul(rlattvec,qdprime)
                 omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*dnrm2(&
-                        3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(6.)
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus_count=N_plus_count+1
                       Indof2ndPhonon_plus(N_plus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
@@ -222,8 +218,6 @@ contains
     real(kind=8) :: realqprime(3),realqdprime(3)
     complex(kind=8) :: Vp,Vp0,prefactor ! The expression of Vp can be found in Natalio's book chapter.
 
-    real(kind=8) :: dnrm2
-
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
@@ -250,9 +244,9 @@ contains
                 realqdprime=matmul(rlattvec,qdprime)
                 omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*dnrm2(&
-                        3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(6.)
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       N_minus_count=N_minus_count+1
                       Indof2ndPhonon_minus(N_minus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
@@ -272,7 +266,7 @@ contains
                                   Vp0=Vp0+Phi(tt,ss,rr,ll)*&
                                        eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
                                        conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1)))*&
-                                       
+
                                        conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
                                end do
                             end do
@@ -307,8 +301,6 @@ contains
     real(kind=8) :: sigma
     real(kind=8) :: omega,omegap,omegadp
 
-    real(kind=8) :: dnrm2
-
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
@@ -332,9 +324,9 @@ contains
                 qdprime=modulo(qdprime,Ngrid)
                 omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*dnrm2(&
-                        3,(velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))*dq,1)/sqrt(6.)
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus_count=N_plus_count+1
                       P3_plus(N_plus_count)=exp(-(omega+omegap-omegadp)**2/(sigma**2))/&
