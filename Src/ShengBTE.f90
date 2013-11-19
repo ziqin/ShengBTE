@@ -159,7 +159,7 @@ program ShengBTE
         omega=energy(list(mm),nn)
         do ii=1,nptk
            do jj=1,Nbands
-              sigma=dnrm2(3,velocity(ii,jj,:)*dq,1)/sqrt(6.)
+              sigma=base_sigma(velocity(ii,jj,:))
               if(abs(omega-Energy(ii,jj)).lt.2.5*sigma) then
                  dos(nn,mm)=dos(nn,mm)+exp(-(omega-Energy(ii,jj))**2/(sigma**2))/sigma/sqrt(pi)
               end if
@@ -184,7 +184,7 @@ program ShengBTE
         omega=energy(list(mm),nn)
         do ii=1,nptk
            do jj=1,Nbands
-              sigma=dnrm2(3,velocity(ii,jj,:)*dq,1)/sqrt(6.)
+              sigma=base_sigma(velocity(ii,jj,:))
               if(abs(omega-Energy(ii,jj)).lt.2.5*sigma) then
                  do kk=1,natoms
                     pdos(nn,mm,kk)=pdos(nn,mm,kk)+&
@@ -217,7 +217,7 @@ program ShengBTE
            omega=energy(list(mm),nn)
            do ii=1,nptk
               do jj=1,Nbands
-                 sigma=dnrm2(3,velocity(ii,jj,:)*dq,1)/sqrt(6.)
+                 sigma=base_sigma(velocity(ii,jj,:))
                  if(abs(omega-Energy(ii,jj)).lt.2.5*sigma) then
                     do kk=1,natoms
                        rate_scatt_isotope(nn,mm)=rate_scatt_isotope(nn,mm)+&

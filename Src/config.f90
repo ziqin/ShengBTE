@@ -42,7 +42,7 @@ module config
        nanowires,onlyharmonic,espresso
 
   integer(kind=4) :: nbands,nptk,nwires
-  real(kind=8) :: cgrid,V,rV,rlattvec(3,3),slattvec(3,3),dq(3)
+  real(kind=8) :: cgrid,V,rV,rlattvec(3,3),slattvec(3,3)
   real(kind=8),allocatable :: cartesian(:,:),uorientations(:,:)
 
   integer(kind=4) :: nsymm
@@ -167,9 +167,6 @@ contains
     rV=2.*pi/V
     rlattvec=rV*rlattvec
     V=abs(V)
-    do i=1,3
-       dq(i)=dnrm2(3,rlattvec(i,:),1)/ngrid(i)
-    end do
 
     cartesian=matmul(lattvec,positions)
 
@@ -329,4 +326,21 @@ contains
 
     Ind2Id=1+Ind_cell(1)+(Ind_cell(2)+Ind_cell(3)*Ngrid(2))*Ngrid(1)
   end function Ind2Id
+
+  ! Return the base broadening (without prefactor) for a mode.
+  function base_sigma(v)
+    implicit none
+    real(kind=8),intent(in) :: v(3)
+
+    real(kind=8) :: base_sigma
+
+    integer(kind=4) :: nu,alpha
+
+    base_sigma=0.
+    do nu=1,3
+       base_sigma=base_sigma+(dot_product(rlattvec(:,nu),v)/ngrid(nu))**2
+    end do
+
+    base_sigma=sqrt(base_sigma/6.)
+  end function base_sigma
 end module config
