@@ -334,7 +334,7 @@ contains
 
     real(kind=8) :: base_sigma
 
-    integer(kind=4) :: nu,alpha
+    integer(kind=4) :: nu
 
     base_sigma=0.
     do nu=1,3
