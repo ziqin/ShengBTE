@@ -48,8 +48,6 @@ contains
     real(kind=8) :: omega,omegap,omegadp ! omega of the first, second
                                          ! and third phonon
 
-    real(kind=8) :: dnrm2
-
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
@@ -124,8 +122,6 @@ contains
     real(kind=8) :: omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
     complex(kind=8) :: Vp,Vp0,prefactor ! The expression of Vp can be found in Natalio's book chapter.
-
-    real(kind=8) :: dnrm2
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
@@ -222,8 +218,6 @@ contains
     real(kind=8) :: realqprime(3),realqdprime(3)
     complex(kind=8) :: Vp,Vp0,prefactor ! The expression of Vp can be found in Natalio's book chapter.
 
-    real(kind=8) :: dnrm2
-
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
@@ -306,8 +300,6 @@ contains
     integer(kind=4) :: ii,jj,kk,ll
     real(kind=8) :: sigma
     real(kind=8) :: omega,omegap,omegadp
-
-    real(kind=8) :: dnrm2
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction

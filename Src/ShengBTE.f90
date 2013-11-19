@@ -70,8 +70,6 @@ program ShengBTE
   character(len=4) :: aux
   character(len=128) :: sorientation
 
-  real(kind=8) :: dnrm2
-
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD,numprocs,ierr)
