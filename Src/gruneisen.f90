@@ -39,7 +39,7 @@ contains
 
     real(kind=8),parameter :: unitfactor=9.6472d4 ! From nm*eV/(amu*A^3*THz^2) to 1.
 
-    integer(kind=4) :: i,ik,ii,jj,kk,iband,itri,ialpha,ibeta,Natom
+    integer(kind=4) :: ik,ii,jj,kk,iband,itri,ialpha,ibeta
     real(kind=8) :: kspace(nptk,3)
     complex(kind=8) :: factor1,factor2,factor3,g(nbands)
 
