@@ -274,6 +274,7 @@ contains
 
     do ii=1,nsymm
        r_out(:,ii)=ngrid*matmul(qrotations(:,:,ii),dble(r_in)/ngrid)
+!       print *,r_in,"--",ii,"-->",r_out(:,ii)
     end do
   end subroutine symm
 
@@ -292,14 +293,13 @@ contains
        do isym=1,Nsymm
           vec=vec_symm(:,isym)
           ivec=nint(vec)
-          if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-6) then
+          if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-2) then
              ID_equi(isym,i)=-1
           else
              ID_equi(isym,i)=Ind2Id(modulo(ivec,ngrid))
           end if
        end do
     end do
-
   end subroutine symmetry_map
 
   ! Create a table that can be used to demultiplex cell indices.
