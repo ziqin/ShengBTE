@@ -274,7 +274,6 @@ contains
 
     do ii=1,nsymm
        r_out(:,ii)=ngrid*matmul(qrotations(:,:,ii),dble(r_in)/ngrid)
-!       print *,r_in,"--",ii,"-->",r_out(:,ii)
     end do
   end subroutine symm
 
