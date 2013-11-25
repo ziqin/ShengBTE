@@ -163,10 +163,9 @@ contains
        call cross_product(lattvec(:,j),lattvec(:,k),rlattvec(:,i))
     end do
 
-    V=dot_product(lattvec(:,1),rlattvec(:,1))
+    V=abs(dot_product(lattvec(:,1),rlattvec(:,1)))
     rV=2.*pi/V
     rlattvec=rV*rlattvec
-    V=abs(V)
 
     cartesian=matmul(lattvec,positions)
 
