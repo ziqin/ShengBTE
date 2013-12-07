@@ -102,7 +102,7 @@ contains
     end if
   end subroutine Nprocesses
 
-  ! Scattering amplitudes of emission processes.
+  ! Scattering amplitudes of absorption processes.
   subroutine Ind_plus(mm,N_plus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
        Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus)
@@ -203,7 +203,7 @@ contains
     if(N_plus_count.ne.N_plus) write(error_unit,*) "Error: in Ind_plus, N_plus_count!=N_plus"
   end subroutine Ind_plus
 
-  ! Scattering amplitudes of absorption processes. See Ind_plus() for details.
+  ! Scattering amplitudes of emission processes. See Ind_plus() for details.
   subroutine Ind_minus(mm,N_minus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
        Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus)
@@ -300,7 +300,8 @@ contains
   ! similar to the rest of subroutines in this module. No matrix
   ! element is calculated in this case (compare with Ind_*) when an
   ! allowed process is detected. Instead, the amplitude of each
-  ! gaussian is added to the final result.
+  ! gaussian is added to the final result. Only absorption processes
+  ! need to be considered owing to symmetry.
   subroutine D_plus(mm,N_plus,energy,velocity,Nlist,List,IJK,P3_plus)
     implicit none
 

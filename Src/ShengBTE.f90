@@ -222,7 +222,7 @@ program ShengBTE
      close(1)
   end if
 
-  ! Isotopic scattering, closey related to the projected DOS.
+  ! Isotopic scattering, closely related to the projected DOS.
   if(isotopes) then
      do mm=1,Nlist
         do nn=1,Nbands

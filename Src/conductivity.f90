@@ -25,7 +25,7 @@ module conductivity
 
 contains
 
-  ! Straightforward implementation of te thermal conductivity as an integral
+  ! Straightforward implementation of the thermal conductivity as an integral
   ! over the whole Brillouin zone in terms of frequencies, velocities and F_n.
   subroutine TConduct(omega,velocity,F_n,ThConductivity)
     implicit none
