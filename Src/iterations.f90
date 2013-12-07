@@ -16,6 +16,9 @@
 !
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+! Code used to initialize F_n for the zeroth-order iteration of the
+! BTE and to perform successive iterations.
 module iterations
   use data
   use config
@@ -24,6 +27,8 @@ module iterations
 
 contains
 
+  ! Fill F_n with its initial values for the iteration, computed from the
+  ! RTA approximation to tau.
   subroutine iteration0(Nlist,Nequi,ALLEquiList,omega,velocity,tau_zero,F_n)
     implicit none
 
@@ -51,6 +56,8 @@ contains
     end do
   end subroutine iteration0
 
+  ! Advance the algorithm one iteration. F_n is used both as the input
+  ! and as the output.
   subroutine iteration(Nlist,Nequi,ALLEquiList,TypeofSymmetry,N_plus,N_minus,Ntotal_plus,Ntotal_minus,&
        Indof2ndPhonon_plus,Indof3rdPhonon_plus,Indof2ndPhonon_minus,Indof3rdPhonon_minus,omega,&
        velocity,Gamma_plus,Gamma_minus,tau_zero,F_n)
@@ -119,6 +126,8 @@ contains
     end do
   end subroutine iteration
 
+  ! Restricted variation of the above subroutine, limited to cases where kappa
+  ! is an scalar. Used in the nanowire calculation.
   subroutine iteration_scalar(Nlist,Nequi,ALLEquiList,TypeofSymmetry,N_plus,N_minus,Ntotal_plus,&
        Ntotal_minus,Indof2ndPhonon_plus,Indof3rdPhonon_plus,Indof2ndPhonon_minus,&
        Indof3rdPhonon_minus,omega,velocity,Gamma_plus,Gamma_minus,tau_zero,F_n)

@@ -254,6 +254,7 @@ contains
     deallocate(ID_Equi,valid)
   end subroutine read_config
 
+  ! Free the memory used by all config structures.
   subroutine free_config()
     deallocate(elements,types,positions,masses,gfactors,born,cartesian,&
          rotations,crotations,qrotations)
@@ -261,10 +262,10 @@ contains
        deallocate(orientations,uorientations)
     end if
   end subroutine free_config
-
   
-  ! Compute all images of a reciprocal-space point using the rotational part of the
-  ! symmetry operations. Everything is performed in lattice coordinates.
+  ! Compute all images of a reciprocal-space point using the
+  ! rotational part of the symmetry operations. Everything is
+  ! performed in lattice coordinates.
   subroutine symm(r_in,r_out)
     implicit none
     integer(kind=4),intent(in) :: r_in(3)

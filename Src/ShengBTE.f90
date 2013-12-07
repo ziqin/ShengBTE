@@ -45,9 +45,9 @@ program ShengBTE
   real(kind=8),allocatable :: ticks(:),cumulative_kappa(:,:,:,:)
 
   integer(kind=4) :: Ntri
-  ! IJK are vectors of product(ngrid) points in the non-orthogonal coordinate system,
-  ! with each component ranging from 0 to Ngrid(:)-1.
-  ! Index_N is a mapping of 3 indices for an individual k point into one index.
+  ! IJK are vectors of product(ngrid) points in the lattice coordinate
+  ! system, with each component ranging from 0 to Ngrid(:)-1.  Index_N
+  ! is a mapping of 3 indices for an individual q-point into one index.
   integer(kind=4),allocatable :: Index_i(:),Index_j(:),Index_k(:),IJK(:,:),Index_N(:,:,:)
   real(kind=8),allocatable :: Phi(:,:,:,:),R_j(:,:),R_k(:,:)
 
@@ -74,6 +74,10 @@ program ShengBTE
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD,numprocs,ierr)
 
+  ! Read CONTROL and initialize variables such as the
+  ! direct/reciprocal lattice vectors, the symmetry operations, the
+  ! Pearson deviation coefficients related to isotopic disorder and so
+  ! on and so forth.
   call read_config()
 
   allocate(energy(nptk,nbands),eigenvect(nptk,nbands,nbands))
@@ -85,6 +89,8 @@ program ShengBTE
   allocate(Nequi(nptk),list(nptk),AllEquiList(nsymm,nptk),TypeOfSymmetry(nsymm,nptk))
   allocate(ffunc(nptk,nbands),v_or(nptk,nbands),F_or(nbands,nptk),kappa_or(nbands))
 
+  ! Obtain the q-point equivalence classes defined by symmetry
+  ! operations.
   call Id2Ind(IJK)
   call wedge(Nlist,Nequi,List,ALLEquiList,TypeofSymmetry)
   do ii=1,Ngrid(1)
@@ -106,6 +112,9 @@ program ShengBTE
      close(1)
   end if
 
+  ! Obtain the phonon spectrum from the 2nd-order force constants (in
+  ! either of the two formats suported) and the dielectric parameters
+  ! in CONTROL.
   if(myid.eq.0) then
      write(*,*) "Info: about to obtain the spectrum"
      if(espresso) then
@@ -117,6 +126,9 @@ program ShengBTE
   call eigenDM(energy,eigenvect,velocity,NList,Nequi,List,AllEquilist,TypeofSymmetry)
   if(myid.eq.0)write(*,*) "Info: spectrum calculation finished"
 
+  ! Compute the harmonic integrals: lattice specific heat and
+  ! small-grain-limit reduced thermal conductivity. Write out this
+  ! information, as well as the spectrum itself.
   if(myid.eq.0) then
      open(1,file="BTE.cv",status="replace")
      write(1,*) cv(energy)
@@ -147,7 +159,9 @@ program ShengBTE
      close(1)
   end if
 
-  allocate(dos(Nbands,Nlist),pdos(Nbands,Nlist,natoms),rate_scatt_isotope(Nbands,Nlist))
+  ! Locally adaptive estimates of the total and projected densities of states.
+  allocate(dos(Nbands,Nlist),pdos(Nbands,Nlist,natoms),&
+       rate_scatt_isotope(Nbands,Nlist))
   dos=0.d0
   pdos=0.d0
   rate_scatt_isotope=0.d0
@@ -208,7 +222,7 @@ program ShengBTE
      close(1)
   end if
 
-  ! Isotope scattering.
+  ! Isotopic scattering, closely related to the projected DOS.
   if(isotopes) then
      do mm=1,Nlist
         do nn=1,Nbands
@@ -240,11 +254,13 @@ program ShengBTE
      end if
   end if
 
+  ! Up to this point, no anharmonic information is used.
   if(onlyharmonic) then
      write(*,*) "Info: onlyharmonic=.true., stopping here"
      stop 0
   end if
 
+  ! Load the anharmonic IFCs from FORCECONSTANTS_3RD.
   call read3fc(Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
 
   ! N_plus for absorption processes and N_minus for emission processes.
@@ -264,6 +280,7 @@ program ShengBTE
      radnw_range(ii)=rmin+(ii-1.0)*dr
   end do
 
+  ! Compute and print the number of allowed absorption and emission processes.
   do mm=myid+1,Nbands*Nlist,numprocs
      call Nprocesses(mm,ii,jj,energy,velocity,Nlist,List(1:Nlist),IJK)
      N_plus_reduce(mm)=ii
@@ -283,6 +300,7 @@ program ShengBTE
   if(myid.eq.0)write(*,*) "Info: Ntotal_plus =",Ntotal_plus
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
 
+  ! Obtain the phase space volume per mode and their sum.
   allocate(Pspace_total(Nbands,Nlist),Pspace_partial(Nbands,Nlist),&
        Pspace_tmp(maxval(N_plus)))
   Pspace_total=0.
@@ -326,6 +344,8 @@ program ShengBTE
      Naccum_minus(mm)=Naccum_minus(mm-1)+N_minus(mm-1)
   end do
 
+  ! Here begins the most expensive part of the calculation: obtaining the
+  ! three-phonon scattering amplitudes for all processes.
   allocate(Indof2ndPhonon_plus_reduce(Ntotal_plus),Indof3rdPhonon_plus_reduce(Ntotal_plus),&
        Indof2ndPhonon_minus_reduce(Ntotal_minus),Indof3rdPhonon_minus_reduce(Ntotal_minus),&
        Gamma_plus_reduce(Ntotal_plus),Gamma_minus_reduce(Ntotal_minus))
@@ -378,6 +398,7 @@ program ShengBTE
      close(1)
   end if
 
+  ! Obtain the total scattering rates in the relaxation time approximation.
   rate_scatt=rate_scatt+rate_scatt_isotope
   if(myid.eq.0) then
      open(1,file="BTE.w",status="replace")
@@ -417,9 +438,11 @@ program ShengBTE
      end do
   end do
 
+  ! Set up everything to start the iterative process.
   call iteration0(Nlist,Nequi,ALLEquiList,energy,velocity,tau_zero,F_n)
   F_n_0=F_n
   if(myid.eq.0) then
+     ! Open all output files.
      open(2001,file="BTE.kappa",status="replace")
      open(2002,file="BTE.kappa_tensor",status="replace")
      open(2003,file="BTE.kappa_scalar",status="replace")
@@ -429,6 +452,7 @@ program ShengBTE
      write(2002,"(I9,9E20.10,E20.10)") 0,sum(ThConductivity,dim=1)
      write(2003,"(I9,E20.10,E20.10)") 0,&
           sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
+     ! Iterate to convergence if desired.
      if(convergence) then
         do ii=1,maxiter
            kappa_old=sum(ThConductivity,dim=1)
@@ -452,6 +476,7 @@ program ShengBTE
      close(2002)
      close(2003)
 
+     ! Write out the converged scattering rates.
      do ll=1,Nlist
         do ii=1,Nbands
            tau(ii,ll)=dot_product(F_n(ii,List(ll),:),velocity(List(ll),ii,:))/&
@@ -466,6 +491,9 @@ program ShengBTE
         end do
         close(1)
      end if
+     ! If results for nanowires have been requested, obtain a lower bound
+     ! for the thermal conductivity along each crystallographic orientation
+     ! by using the bulk RTA results.
      if(nanowires) then
         do iorient=1,norientations
            write(sorientation,"(I128)") iorient
@@ -492,6 +520,7 @@ program ShengBTE
         end do
      end if
      allocate(ticks(nticks),cumulative_kappa(nbands,3,3,nticks))
+     ! Cumulative thermal conductivity.
      call CumulativeTConduct(energy,velocity,F_n,ticks,cumulative_kappa)
      write(aux,"(I0)") 9*nbands+1
      open(2001,file="BTE.cumulative_kappa",status="replace")
@@ -513,6 +542,9 @@ program ShengBTE
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
+  ! If results for nanowires have been requested, repeat the iterative process
+  ! for each desired orientation, introducing the appropriate scaling of
+  ! relaxation times.
   if(nanowires) then
      kappa_wires=0.d00
      kappa_wires_reduce=0.d00

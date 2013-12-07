@@ -22,6 +22,7 @@
 module symmetry
   use iso_c_binding
   implicit none
+  ! Tolerance parameter passed to spglib.
   real(kind=C_DOUBLE),parameter :: symprec=1d-5
 
 contains
@@ -37,12 +38,15 @@ contains
 
     integer(kind=4) :: get_num_operations
 
+    ! Notice the explicit C-compatible types used through this module.
     real(kind=C_DOUBLE),dimension(3,3) :: clattice
     integer(kind=C_INT) :: cnatoms
     integer(kind=C_INT),dimension(natoms) :: ctypes
     real(kind=C_DOUBLE),dimension(3,natoms) :: cpositions
     integer(kind=C_INT) :: num
 
+    ! This kind of transposition is needed for interoperability with
+    ! C.
     clattice=transpose(lattice)
     cnatoms=natoms
     ctypes=types
@@ -91,6 +95,7 @@ contains
          cpositions,ctypes,cnatoms,symprec)
     international=intertmp(1:10)
     nops=newnops
+    ! Transform from C to Fortran order.
     do i=1,nops
        rotations(:,:,i)=transpose(crotations(:,:,i))
     end do
@@ -117,6 +122,8 @@ contains
     do i=1,nops
        tmp1=transpose(lattice)
        tmp2=transpose(rotations(:,:,i))
+       ! Rotations transform as tensors: both the lattice-vector matrix
+       ! and its inverse are needed. Explicit inversions are avoided.
        call dgesv(3,3,tmp1,3,P,tmp2,3,info)
        crotations(:,:,i)=transpose(matmul(tmp2,transpose(lattice)))
     end do
