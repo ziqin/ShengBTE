@@ -27,6 +27,7 @@ program ShengBTE
   use conductivity
   use scaling
   use phonon_routines
+  use gruneisen
   use integrals
   implicit none
 
@@ -36,6 +37,8 @@ program ShengBTE
   integer(kind=4) :: i,j,ii,jj,kk,ll,mm,nn
   real(kind=8),allocatable :: energy(:,:),q0(:,:),velocity(:,:,:),velocity_z(:,:)
   complex(kind=8),allocatable :: eigenvect(:,:,:)
+
+  real(kind=8),allocatable :: grun(:,:)
 
   real(kind=8),allocatable :: rate_scatt(:,:),rate_scatt_reduce(:,:)
   real(kind=8),allocatable :: tau_zero(:,:),tau(:,:)
@@ -76,7 +79,7 @@ program ShengBTE
 
   call read_config()
 
-  allocate(energy(nptk,nbands),eigenvect(nptk,nbands,nbands))
+  allocate(energy(nptk,nbands),eigenvect(nptk,nbands,nbands),grun(nptk,nbands))
   allocate(q0(nptk,3),velocity(nptk,nbands,3),velocity_z(nptk,nbands))
   allocate(IJK(3,nptk),Index_N(0:(ngrid(1)-1),0:(ngrid(2)-1),0:(ngrid(3)-1)))
   allocate(F_n(nbands,nptk,3),F_n_0(nbands,nptk,3),F_n_aux(nbands,nptk))
@@ -246,6 +249,21 @@ program ShengBTE
   end if
 
   call read3fc(Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+
+  call mode_grun(energy,eigenvect,Ntri,Phi,R_j,R_k,&
+       Index_i,Index_j,Index_k,grun)
+  write(aux,"(I0)") Nbands
+  if(myid.eq.0) then
+     open(1,file="BTE.gruneisen",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") grun(list(ll),:)
+     end do
+     close(1)
+     open(1,file="BTE.gruneisen_total",status="replace")
+     write(1,*) total_grun(energy,grun)
+     close(1)
+  end if
+  deallocate(grun)
 
   ! N_plus for absorption processes and N_minus for emission processes.
   allocate(N_plus(Nlist*Nbands),N_minus(Nlist*Nbands))
