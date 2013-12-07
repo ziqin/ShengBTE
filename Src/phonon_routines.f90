@@ -60,6 +60,8 @@ contains
     kk=ceiling(float(nptk)/numprocs)
     ii=min(nptk,kk*myid)+1
     jj=min(nptk,kk*(myid+1))
+    ! The routine to be called depends on the input format, selected through a
+    ! flag in the CONTROL file.
     if(espresso) then
        call phonon_espresso(kspace(ii:jj,:),omega_reduce(ii:jj,:),&
             velocity_reduce(ii:jj,:,:),eigenvect_reduce(ii:jj,:,:))
@@ -74,6 +76,8 @@ contains
     call MPI_ALLREDUCE(eigenvect_reduce,eigenvect,nptk*nbands*nbands,&
          MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,kk)
     deallocate(omega_reduce,velocity_reduce,eigenvect_reduce)
+    ! To better preserve symmetries, we make sure that group velocities are
+    ! equivalent q points are related through rotations.
     do ii=1,Nlist
        do jj=1,Nequi(ii)
           omega(AllEquilist(jj,ii),:)=omega(list(ii),:)
@@ -85,6 +89,7 @@ contains
     end do
   end subroutine eigenDM
 
+  ! Compute phonon dispersions, Phonopy style.
   subroutine phonon_phonopy(kpoints,omegas,velocities,eigenvect)
     implicit none
 
@@ -99,7 +104,7 @@ contains
     complex(kind=8),allocatable :: dyn_total(:,:),dyn_nac(:,:)
     complex(kind=8),allocatable :: ddyn_total(:,:,:),ddyn_nac(:,:,:)
     real(kind=8),allocatable :: fc_short(:,:,:,:,:,:,:)
-    real(kind=8),allocatable :: fc_wang(:,:,:,:,:,:,:)
+    real(kind=8),allocatable :: fc_diel(:,:,:,:,:,:,:)
     real(kind=8),allocatable :: fc_total(:,:,:,:,:,:,:)
 
     integer(kind=4) :: i,j,ip,ik,neq
@@ -120,7 +125,7 @@ contains
     allocate(omega2(nbands))
     allocate(rwork(max(1,9*natoms-2)))
 
-    allocate(fc_wang(natoms,3,scell(1),scell(2),scell(3),natoms,3))
+    allocate(fc_diel(natoms,3,scell(1),scell(2),scell(3),natoms,3))
     allocate(fc_total(natoms,3,scell(1),scell(2),scell(3),natoms,3))
 
     do i=1,natoms
@@ -131,6 +136,7 @@ contains
        end do
     end do
 
+    ! Read FORCE_CONSTANTS_2ND and reduce the constants using mm.
     call read2fc(fc_short)
 
     allocate(dyn_total(nbands,nbands))
@@ -144,9 +150,10 @@ contains
        dyn_nac=0.
        ddyn_total=0.
        ddyn_nac=0.
-       fc_wang=0.
-       ! No long-range correction is applied exactly at \Gamma in order
-       ! not to rely on guesses about directions.
+       fc_diel=0.
+       ! If the nonanalytic flag is set to TRUE, add the electrostatic
+       ! correction. No correction is applied exactly at \Gamma in
+       ! order not to rely on guesses about directions.
        if(nonanalytic.and..not.all(kpoints(ik,:).eq.0.)) then
           tmp3=dot_product(kpoints(ik,:),matmul(epsilon,kpoints(ik,:)))
           do iatom1=1,natoms
@@ -157,6 +164,9 @@ contains
                       tmp2=dot_product(kpoints(ik,:),born(:,j,iatom2))
                       dyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j)=tmp1*tmp2/&
                            mm(iatom1,iatom2)
+                      ! The derivatives of the nonanalytic correction
+                      ! will be needed later to make group velocities
+                      ! and frequencies completely consistent.
                       do ip=1,3
                          ddyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j,ip)=&
                               tmp1*born(ip,j,iatom2)+tmp2*born(ip,i,iatom1)-&
@@ -171,20 +181,24 @@ contains
           end do
           dyn_nac=prefactor*dyn_nac/tmp3/V
           ddyn_nac=prefactor*ddyn_nac/tmp3/V
+          ! Transform back to real space to obtain a correction to the
+          ! short-range force constants.
           do iatom1=1,natoms
              do iatom2=1,natoms
                 do i=1,3
                    do j=1,3
-                      fc_wang(iatom1,i,:,:,:,iatom2,j)=real(dyn_nac(3*(iatom1-1)+i,&
+                      fc_diel(iatom1,i,:,:,:,iatom2,j)=real(dyn_nac(3*(iatom1-1)+i,&
                            3*(iatom2-1)+j))
                    end do
                 end do
              end do
           end do
-          fc_wang=fc_wang/(scell(1)*scell(2)*scell(3))
+          fc_diel=fc_diel/(scell(1)*scell(2)*scell(3))
        end if
 
-       fc_total=fc_short+fc_wang
+       ! Force constants with long-range correction.
+       fc_total=fc_short+fc_diel
+       ! Build the dynamical matrix and its derivatives.
        do iatom1=1,natoms
           do iatom2=1,natoms
              do ix1=1,scell(1)
@@ -245,6 +259,9 @@ contains
           end do
        end do
 
+       ! Frequencies squared result from a diagonalization of the
+       ! dynamical matrix. The first call to zheev serves to ensure that
+       ! enough space has been allocated for this.
        call zheev("V","U",nbands,dyn_total,nbands,omega2,work,-1,rwork,i)
 
        if(real(work(1)).gt.nwork) then
@@ -254,6 +271,7 @@ contains
        end if
        call zheev("V","U",nbands,dyn_total,nbands,omega2,work,nwork,rwork,i)
 
+       ! Eigenvectors are also returned if required.
        if(present(eigenvect)) then
           eigenvect(ik,:,:)=transpose(dyn_total)
        end if
@@ -261,6 +279,8 @@ contains
        ! As is conventional, imaginary frequencies are returned as negative.
        omegas(ik,:)=sign(sqrt(abs(omega2)),omega2)
 
+       ! Group velocities are obtained perturbatively. This is very
+       ! advatageous with respect to finite differences.
        do i=1,nbands
           do ip=1,3
              velocities(ik,i,ip)=real(dot_product(dyn_total(:,i),&
@@ -269,7 +289,7 @@ contains
           velocities(ik,i,:)=velocities(ik,i,:)/(2.*omegas(ik,i))
        end do
     end do
-    deallocate(mm,omega2,rwork,fc_short,fc_wang,fc_total,&
+    deallocate(mm,omega2,rwork,fc_short,fc_diel,fc_total,&
          dyn_total,dyn_nac,ddyn_total,ddyn_nac,work)
   end subroutine phonon_phonopy
 
@@ -305,6 +325,11 @@ contains
     complex(kind=8),allocatable :: dyn(:,:),dyn_s(:,:,:),dyn_g(:,:,:)
     complex(kind=8),allocatable :: ddyn(:,:,:),ddyn_s(:,:,:,:),ddyn_g(:,:,:,:)
 
+    ! Quantum Espresso's 2nd-order format contains information about
+    ! lattice vectors, atomic positions, Born effective charges and so
+    ! forth in its header. The information is read but completely
+    ! ignored. It is the user's responsibility to ensure that
+    ! it is consistent with the CONTROL file.
     nwork=1
     nk=size(kpoints,1)
     open(1,file="espresso.ifc2",status="old")
@@ -364,12 +389,15 @@ contains
        zeff(i,:,:)=born(:,:,i)
     end do
     read(1,*) qscell(1:3)
+    ! Read the force constants.
     do i=1,3*3*nat*nat
        read(1,*) ipol,jpol,iat,jat
        do j=1,scell(1)*scell(2)*scell(3)
           read(1,*) t1,t2,t3,fc_s(ipol,jpol,iat,jat,t1,t2,t3)
        end do
     end do
+    ! Enforce the conservation of momentum in the simplest way possible.
+    ! Note that this is not necessary for the Phonopy format.
     do i=1,3
        do j=1,3
           do iat=1,nat
@@ -389,6 +417,7 @@ contains
     end do
     close(1)
 
+    ! Make sure operations are performed in consistent units.
     k=kpoints*bohr2nm
     cell_r(:,1:3)=transpose(lattvec)/bohr2nm
     volume_r=V/bohr2nm**3
@@ -400,6 +429,8 @@ contains
        cell_g(i,0)=dnrm2(3,cell_g(i,1:3),1)
     end do
 
+    ! The dynamical matrix is built in a way similar to the previous
+    ! subroutine.
     wscell(1,1:3)=cell_r(1,1:3)*scell(1)
     wscell(2,1:3)=cell_r(2,1:3)*scell(2)
     wscell(3,1:3)=cell_r(3,1:3)*scell(3)
@@ -428,8 +459,8 @@ contains
           rr(i,j,1:3)=r(i,1:3)-r(j,1:3)
           mm(j,i)=mm(i,j)
           rr(j,i,1:3)=-rr(i,j,1:3)
-       End Do
-    End Do
+       end do
+    end do
 
     gmax=14.
     alpha=(2.*pi/celldm(1))**2
@@ -503,6 +534,9 @@ contains
           end do
        end do
     end do
+    ! The nonanalytic correction has two components in this
+    ! approximation. Results may differ slightly between this method
+    ! and the one implemented in the previous subroutine.
     dyn_g=0.
     ddyn_g=0.
     if(nonanalytic) then
@@ -627,6 +661,9 @@ contains
        dyn_g=dyn_g*8.*pi/volume_r
        ddyn_g=ddyn_g*8.*pi/volume_r
     end if
+    ! Once the dynamical matrix has been built, the frequencies and
+    ! group velocities are extracted exactly like in the previous
+    ! subroutine.
     do ik=1,nk
        dyn(:,:)=dyn_s(ik,:,:)+dyn_g(ik,:,:)
        ddyn(:,:,:)=ddyn_s(ik,:,:,:)+ddyn_g(ik,:,:,:)
@@ -655,7 +692,6 @@ contains
           eigenvect(ik,:,:)=transpose(dyn(:,:))
        end if
 
-       ! As is conventional, imaginary frequencies are returned as negative.
        omegas(ik,:)=sign(sqrt(abs(omega2)),omega2)
 
        do i=1,nbands
@@ -663,9 +699,10 @@ contains
              velocities(ik,i,j)=real(dot_product(dyn(:,i),&
                   matmul(ddyn(:,:,j),dyn(:,i))))
           end do
-          velocities(ik,i,:)=velocities(ik,i,:)/(2.*omegas(ik,i)+1d-10)
+          velocities(ik,i,:)=velocities(ik,i,:)/(2.*omegas(ik,i))
        end do
     end do
+    ! Return the result to the units used in the rest of ShengBTE.
     omegas=omegas*toTHz
     velocities=velocities*toTHz*bohr2nm
     deallocate(k)

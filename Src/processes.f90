@@ -17,8 +17,8 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-! Compute the number of allowed three-phonon processes and their
-! scattering amplitudes.
+! Compute the number of allowed three-phonon processes, their
+! scattering amplitudes and their phase-space volume.
 
 module processes
   use iso_fortran_env
@@ -30,6 +30,7 @@ module processes
 
 contains
 
+  ! Number of absorption and emission processes.
   subroutine Nprocesses(mm,N_plus,N_minus,energy,velocity,Nlist,List,IJK)
     implicit none
 
@@ -37,16 +38,11 @@ contains
     integer(kind=4),intent(out) :: N_plus,N_minus
     real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
 
-    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k ! Each element
-                                                       ! of q or
-                                                       ! qprime ranges
-                                                       ! from 0 to
-                                                       ! Ngrid(:)-1.
+    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
     integer(kind=4) :: ii,jj,kk,ll
-    real(kind=8) :: sigma ! Gaussian broadening parameter, in THz.
-    real(kind=8) :: omega,omegap,omegadp ! omega of the first, second
-                                         ! and third phonon
+    real(kind=8) :: sigma
+    real(kind=8) :: omega,omegap,omegadp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
@@ -61,6 +57,11 @@ contains
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,List(ll))
     omega=energy(index_N(q(1),q(2),q(3)),i)
+    ! omega, omegap and omegadp are the frequencies of the three
+    ! phonons involved in each process. A locally adaptive broadening
+    ! (sigma) is computed for each process and used to determine
+    ! whether it is allowed by conservation of energy. The regularized
+    ! version of the Dirac delta chosen for this is a gaussian.
     if (omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
@@ -101,6 +102,7 @@ contains
     end if
   end subroutine Nprocesses
 
+  ! Scattering amplitudes of absorption processes.
   subroutine Ind_plus(mm,N_plus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
        Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus)
@@ -121,7 +123,7 @@ contains
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
-    complex(kind=8) :: Vp,Vp0,prefactor ! The expression of Vp can be found in Natalio's book chapter.
+    complex(kind=8) :: Vp,Vp0,prefactor
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
@@ -135,6 +137,11 @@ contains
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
     omega=energy(index_N(q(1),q(2),q(3)),i)
+    ! The following loop is very similar to the central part of
+    ! Nprocesses(), with the exception that when an allowed process is
+    ! detected its scattering amplitude is computed. This amplitude
+    ! involves the anharmonic force constants, and its precise
+    ! expression can be found in the manuscript.
     if(omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
@@ -196,6 +203,7 @@ contains
     if(N_plus_count.ne.N_plus) write(error_unit,*) "Error: in Ind_plus, N_plus_count!=N_plus"
   end subroutine Ind_plus
 
+  ! Scattering amplitudes of emission processes. See Ind_plus() for details.
   subroutine Ind_minus(mm,N_minus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
        Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus)
@@ -216,7 +224,7 @@ contains
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) ::  omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
-    complex(kind=8) :: Vp,Vp0,prefactor ! The expression of Vp can be found in Natalio's book chapter.
+    complex(kind=8) :: Vp,Vp0,prefactor
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
@@ -288,6 +296,12 @@ contains
     if(N_minus_count.ne.N_minus) write(error_unit,*) "Error: in Ind_minus, N_minus_count!=N_minus"
   end subroutine Ind_minus
 
+  ! Mode contribution to the phase-space volume. The algorithm is very
+  ! similar to the rest of subroutines in this module. No matrix
+  ! element is calculated in this case (compare with Ind_*) when an
+  ! allowed process is detected. Instead, the amplitude of each
+  ! gaussian is added to the final result. Only absorption processes
+  ! need to be considered owing to symmetry.
   subroutine D_plus(mm,N_plus,energy,velocity,Nlist,List,IJK,P3_plus)
     implicit none
 

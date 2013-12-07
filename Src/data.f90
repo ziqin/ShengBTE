@@ -17,15 +17,16 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-! Physical constants and other relevant data.
+! Physical constants, table of isotopic masses and other relevant data.
 module data
   implicit none
-  
+
   real(kind=8),parameter :: pi=3.141592653589793238d0
   real(kind=8),parameter :: kb=1.380648813d-23 ! J/K
   real(kind=8),parameter :: hbar=1.05457172647d-22 ! J*THz
   complex(kind=8),parameter :: iunit=(0.,1.)
 
+  ! List of elements, ordered by atomic number.
   character(len=3),parameter :: periodic_table(114)=[character(len=3) ::&
        "H","He","Li","Be","B","C","N","O",&
        "F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca","Sc","Ti","V",&
@@ -36,7 +37,9 @@ module data
        "Tl","Pb","Bi","Po","At","Rn","Fr","Ra","Ac","Th","Pa","U","Np","Pu","Am",&
        "Cm","Bk","Cf","Es","Fm","Md","No","Lr","Rf","Db","Sg","Bh","Hs","Mt","Ds",&
        "Rg","Cn","Uuq","Uuh"]
-  
+
+  ! Information about isotopes is stored as a linked list of these
+  ! simple data structures.
   type :: isotope_t
      character(len=3) :: element
      real(kind=8) :: mass
@@ -48,6 +51,7 @@ module data
 
 contains
 
+  ! Add information about a new isotope.
   subroutine data_new_isotope(element,mass,abundance)
     character(len=*),intent(in) :: element
     real(kind=8),intent(in) :: mass,abundance
@@ -61,7 +65,9 @@ contains
     new_isotope%prev=>isotope_end
     isotope_end=>new_isotope
   end subroutine data_new_isotope
-    
+
+  ! Fill in the information about isotopes. This code
+  ! was generated automatically.
   subroutine data_fill_isotopes()
     call data_new_isotope("Ag",106.905095d0,51.84d0)
     call data_new_isotope("Ag",108.904754d0,48.16d0)
@@ -352,6 +358,7 @@ contains
     call data_new_isotope("Zr",95.908272d0,2.78d0)
   end subroutine data_fill_isotopes
 
+  ! Free the memory used by the linked list with isotopic information.
   subroutine data_free_isotopes()
     type(isotope_t),pointer :: p
 
@@ -363,6 +370,8 @@ contains
     end do
   end subroutine data_free_isotopes
 
+  ! Compute the average mass of each element and its g-factor (Pearson
+  ! deviation coefficient of the masses).
   subroutine data_calc_mandg(element,m,g)
     character(len=3),intent(in) :: element
     real(kind=8),intent(out) :: m,g
