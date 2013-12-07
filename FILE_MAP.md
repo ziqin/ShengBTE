@@ -5,10 +5,9 @@
 │   ├── arch.make.example
 │   ├── ShengBTE.pdf
 │   └── ShengBTE.tex
-├── FILE_MAP
+├── FILE_MAP.md
 ├── LICENSE
 ├── Src
-│   ├── arch.make
 │   ├── conductivity.f90
 │   ├── config.f90
 │   ├── data.f90
@@ -59,7 +58,7 @@ The whole of ShengBTE is written in Fortran and contained in the Src subdirector
 
 * misc.f90: Miscelaneous mathematical routines: cross product, integer division and Frobenius norm of a 3x3 matrix
 
-* symmetry.f90: Thin wrapper around those parts of Atsushi Togo's [spglib](http://spglib.sourceforge.net/) relevant for ShengBTE. That library is used to detect the symmetry group of the system and obtain a matrix representation of its operations
+* symmetry.f90: Thin wrapper around those parts of Atsushi Togo's [spglib](http://spglib.sourceforge.net/) relevant for ShengBTE. That library is used to detect the symmetry group of the system and to obtain a matrix representation of its operations
 
 * config.f90: Code to read and parse the CONTROL file and perform some operations based on this data. More specifically, this file contains calls to the symmetry routines to fill the associated data structures. A function used to compute the optimal broadening for each mode is also defined here on account of relying on information from CONTROL
 
@@ -71,7 +70,7 @@ The whole of ShengBTE is written in Fortran and contained in the Src subdirector
 
 * integrals.f90: Routines used to calculate the lattice specific heat and the small-grain-limit reduced thermal conductivity
 
-* processes.f90: Calculation of the number of allowed processed, their scattering rate and their phase space volume
+* processes.f90: Calculation of the number of allowed three-phonon processes, their scattering rate and their phase-space volume
 
 * iterations.f90: Routines to set up the initial conditions for the iterative process and to perform iterations
 
@@ -88,7 +87,7 @@ The whole of ShengBTE is written in Fortran and contained in the Src subdirector
 
 * Makefile: set of make rules for building ShengBTE
 
-* arch.make.example: Machine-specific variables needed for the compilation. Must be copied to arch.make and customized appropriately
+* arch.make.example: Machine-specific variables needed for the compilation. Must be copied to Src/arch.make and customized appropriately
 
 * CONTROL, FORCE\_CONSTANTS\_2ND, FORCE\_CONSTANTS\_3RD: Complete set of input files to run ShengBTE for InAs, a test case
 

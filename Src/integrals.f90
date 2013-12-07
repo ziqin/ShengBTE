@@ -17,6 +17,9 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+! Lattice specific heat and small-grain-limit reduced thermal
+! conductivity. Both are calculated as integrals over the BZ and contain
+! no anharmonic information.
 module integrals
   use config
   use data
@@ -24,6 +27,7 @@ module integrals
 
 contains
 
+  ! Lattice specific heat per unit volume.
   function cv(omega)
     implicit none
     real(kind=8),intent(in) :: omega(nptk,nbands)
@@ -46,6 +50,8 @@ contains
     cv=kB*cv/(1e-27*V*nptk) ! J/(K m^3)
   end function cv
 
+  ! Small-grain-limit reduced thermal conductivity. In contrast with cv,
+  ! group velocities play a role in this integral.
   subroutine kappasg(omega,velocity,nruter)
     implicit none
     real(kind=8),intent(in) :: omega(nptk,nbands),velocity(nptk,nbands,3)

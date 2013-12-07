@@ -17,6 +17,7 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+! Compute the thermal conductivity and its cumulative version.
 module conductivity
   use config
   use data
@@ -24,6 +25,8 @@ module conductivity
 
 contains
 
+  ! Straightforward implementation of te thermal conductivity as an integral
+  ! over the whole Brillouin zone in terms of frequencies, velocities and F_n.
   subroutine TConduct(omega,velocity,F_n,ThConductivity)
     implicit none
 
@@ -48,7 +51,8 @@ contains
     ThConductivity=1e21*hbar**2*ThConductivity/(kB*T*T*V*nptk)
   end subroutine TConduct
 
-
+  ! Specialized version of the above subroutine for those cases where kappa
+  ! can be treated as a scalar.
   subroutine TConductScalar(omega,velocity,F_n,ThConductivity)
     implicit none
 
@@ -69,7 +73,9 @@ contains
     ThConductivity=1e21*hbar**2*ThConductivity/(kB*T*T*V*nptk)
   end subroutine TConductScalar
 
-
+  ! "Cumulative thermal conductivity": value of kappa obtained when
+  ! only phonon with mean free paths below a threshold are considered.
+  ! ticks is a list of the thresholds to be employed.
   subroutine CumulativeTConduct(omega,velocity,F_n,ticks,results)
     implicit none
 
@@ -106,6 +112,5 @@ contains
     end do
     results=1e21*hbar**2*results/(kB*T*T*V*nptk)
   end subroutine CumulativeTConduct
-
 
 end module conductivity

@@ -17,12 +17,18 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+! Correction to the bulk tau required for nanowires.
+
 module scaling
   use config
   use data
   implicit none
 
 contains
+  ! Correction to tau for nanowires, based on a radial average. Note
+  ! that a direction needs to be selected before calling this
+  ! subroutine: velocity_z is the projection of velocity over that
+  ! axis.
   subroutine ScalingOfTau(Nlist,Nequi,ALLEquiList,velocity_z,&
        velocity,tauzero_wedge,radnw,ffunc)
     implicit none

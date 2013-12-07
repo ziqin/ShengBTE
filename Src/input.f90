@@ -17,18 +17,21 @@
 !  You should have received a copy of the GNU General Public License
 !  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-! Routines to read some input formats.
+! Routines to read FORCE_CONSTANTS_2ND and FORCE_CONSTANTS_3RD.
 module input
   use iso_fortran_env
   use config
   implicit none
 
+  ! The file names are defined here and can be changed for custom builds.
+  ! This is especially relevant is the format needs to be changed.
   character(len=*),parameter :: filename_2fc="FORCE_CONSTANTS_2ND"
   character(len=*),parameter :: filename_3fc="FORCE_CONSTANTS_3RD"
   real(kind=8),parameter :: unitfactor=9648.53336213 ! from eV/(A^2*amu) to THz^2
 
 contains
 
+  ! Read FORCE_CONSTANTS_2ND.
   subroutine read2fc(fc)
     implicit none
     real(kind=8),allocatable,intent(out) :: fc(:,:,:,:,:,:,:)
@@ -47,6 +50,9 @@ contains
 
     allocate(fc(natoms,3,scell(1),scell(2),scell(3),natoms,3))
 
+    ! Phonopy's 2nd-order format is quite straightforward. Each file
+    ! is essentially a sequence of 3x3 blocks, one for each pair of atoms
+    ! in the supercell. A single header line contains the number of atoms.
     open(1,file=filename_2fc,status="old")
     read(1,*) ntot
     if(ntot.ne.scell(1)*scell(2)*scell(3)*natoms) then
@@ -73,6 +79,9 @@ contains
     end do
     close(1)
 
+    ! After reading the force constants, they are reduced using the
+    ! tensor product of the square root of the atomic masses. It is these
+    ! reduced constants that enter the expression of the dynamical matrix.
     do iatom1=1,natoms
        do iatom2=1,natoms
           fc(iatom1,:,:,:,:,iatom2,:)=&
@@ -82,6 +91,8 @@ contains
     fc=unitfactor*fc
   end subroutine read2fc
 
+  ! Convert a supercell index of the kind used by Phonopy into
+  ! a set of unit cell+atom indices.
   subroutine split_index(index,nx,ny,nz,ix,iy,iz,iatom)
     implicit none
 
@@ -100,6 +111,7 @@ contains
     iatom=iatom+1
   end subroutine split_index
 
+  ! Read FORCE_CONSTANTS_3RD.
   subroutine read3fc(Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
     implicit none
     integer(kind=4),intent(out) :: Ntri
@@ -109,6 +121,8 @@ contains
     real(kind=8) :: tmp(3,3)
     integer(kind=4) :: ii,jj,ll,mm,nn,ltem,mtem,ntem,info,P(3)
 
+    ! The file is in a simple sparse format, described in detail in
+    ! the user documentation. See Doc/ShengBTE.pdf.
     open(1,file=filename_3fc,status="old")
     read(1,*) Ntri
     allocate(Index_i(Ntri),Index_j(Ntri),Index_k(Ntri))
@@ -127,6 +141,7 @@ contains
        end do
     end do
     close(1)
+    ! Each vector is rounded to the nearest lattice vector.
     tmp=lattvec
     call dgesv(3,Ntri,tmp,3,P,R_j,3,info)
     R_j=matmul(lattvec,anint(R_j/10.))
