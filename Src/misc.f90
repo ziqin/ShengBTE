@@ -73,6 +73,6 @@ contains
     real(kind=8),intent(in) :: x
     complex(kind=8) :: phexp
 
-    phexp=cmplx(cos(x),sin(x))
+    phexp=cmplx(cos(x),sin(x),kind=8)
   end function phexp
 end module misc
