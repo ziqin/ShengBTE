@@ -70,7 +70,7 @@ contains
   function phexp(x)
     implicit none
 
-    real(kind=8) :: x
+    real(kind=8),intent(in) :: x
     complex(kind=8) :: phexp
 
     phexp=cmplx(cos(x),sin(x))
