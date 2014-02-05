@@ -19,6 +19,7 @@
 
 ! Subroutines and functions related to Grüneisen parameters.
 module gruneisen
+  use misc
   use data
   use config
   use input
@@ -57,7 +58,7 @@ contains
        g=0.0
        do iband=1,nbands
           do itri=1,Ntri
-             factor1=exp(iunit*dot_product(kspace(ik,:),R_j(:,itri)))/&
+             factor1=phexp(dot_product(kspace(ik,:),R_j(:,itri)))/&
                   sqrt(masses(Index_i(itri))*masses(Index_j(itri)))
              do ialpha=1,3
                 factor2=factor1*conjg(eigenvect(ik,iband,&

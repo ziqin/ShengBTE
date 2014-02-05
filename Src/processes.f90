@@ -22,6 +22,7 @@
 
 module processes
   use iso_fortran_env
+  use misc
   use data
   use config
   implicit none
@@ -169,8 +170,8 @@ contains
                       do ll=1,Ntri
                          prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
                               masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-                              exp(iunit*dot_product(realqprime/ngrid,R_j(:,ll)))*&
-                              exp(-iunit*dot_product(realqdprime/ngrid,R_k(:,ll)))
+                              phexp(dot_product(realqprime/ngrid,R_j(:,ll)))*&
+                              phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
                          Vp0=0.
                          do rr=1,3
                             do ss=1,3
@@ -265,8 +266,8 @@ contains
                       do ll=1,Ntri
                          prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
                               masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-                              exp(-iunit*dot_product(realqprime/ngrid,R_j(:,ll)))*&
-                              exp(-iunit*dot_product(realqdprime/ngrid,R_k(:,ll)))
+                              phexp(-dot_product(realqprime/ngrid,R_j(:,ll)))*&
+                              phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
                          Vp0=0.
                          do rr=1,3
                             do ss=1,3
