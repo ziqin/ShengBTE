@@ -337,7 +337,6 @@ contains
     read(1,*) ntype,nat,ibrav,celldm(1:6)
     ntype=nelements
     nat=natoms
-    celldm(1)=lfactor/bohr2nm
     ndim=3*nat
 
     allocate(omega2(nbands))
