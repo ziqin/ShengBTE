@@ -19,6 +19,7 @@
 
 ! Routines used to calculate the phonon spectrum.
 module phonon_routines
+  use misc
   use data
   use config
   use input
@@ -230,7 +231,7 @@ contains
                       end do
                       star=0.
                       do ip=1,neq
-                         ztmp=exp(-iunit*qr(ip))/neq
+                         ztmp=phexp(-qr(ip))/neq
                          star=star+ztmp
                          do i=1,3
                             do j=1,3
@@ -336,7 +337,6 @@ contains
     read(1,*) ntype,nat,ibrav,celldm(1:6)
     ntype=nelements
     nat=natoms
-    celldm(1)=lfactor/bohr2nm
     ndim=3*nat
 
     allocate(omega2(nbands))
@@ -384,9 +384,9 @@ contains
           end do
        end do
     end if
-    eps=epsilon
+    eps=transpose(epsilon)
     do i=1,nat
-       zeff(i,:,:)=born(:,:,i)
+       zeff(i,:,:)=transpose(born(:,:,i))
     end do
     read(1,*) qscell(1:3)
     ! Read the force constants.
@@ -519,11 +519,11 @@ contains
                                jdim = (jat-1)*3+jpol
                                dyn_s(ik,idim,jdim)=dyn_s(ik,idim,jdim)+&
                                     fc_s(ipol,jpol,iat,jat,t1,t2,t3)*&
-                                    exp(-iunit*kt)*weight
+                                    phexp(-kt)*weight
                                ddyn_s(ik,idim,jdim,1:3)=ddyn_s(ik,idim,jdim,1:3)-&
                                     iunit*t(1:3)*&
                                     fc_s(ipol,jpol,iat,jat,t1,t2,t3)*&
-                                    exp(-iunit*kt)*weight
+                                    phexp(-kt)*weight
                             end do
                          end do
                       end do
@@ -560,7 +560,7 @@ contains
                          zjg(1:3)=g(1)*zeff(jat,1,1:3)+&
                               g(2)*zeff(jat,2,1:3)+&
                               g(3)*zeff(jat,3,1:3)
-                         auxi(1:3)=auxi(1:3)+zjg(1:3)*exp(iunit*gr)
+                         auxi(1:3)=auxi(1:3)+zjg(1:3)*phexp(gr)
                       end do
                       do ipol=1,3
                          idim=(iat-1)*3+ipol
@@ -600,10 +600,10 @@ contains
                                do jpol=1,3
                                   jdim=(jat-1)*3+jpol
                                   dyn_g(ik,idim,jdim)=dyn_g(ik,idim,jdim)+&
-                                       exp_g*zig(ipol)*zjg(jpol)*exp(iunit*gr)
+                                       exp_g*zig(ipol)*zjg(jpol)*phexp(gr)
                                   do i=1,3
                                      ddyn_g(ik,idim,jdim,i)=ddyn_g(ik,idim,jdim,i)+&
-                                          exp_g*exp(iunit*gr)*&
+                                          exp_g*phexp(gr)*&
                                           (zjg(jpol)*zeff(iat,i,ipol)+zig(ipol)*zeff(jat,i,jpol)+&
                                           zig(ipol)*zjg(jpol)*iunit*rr(iat,jat,i)-&
                                           zig(ipol)*zjg(jpol)*(dgeg(i)/alpha/4.0+dgeg(i)/geg))

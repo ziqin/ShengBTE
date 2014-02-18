@@ -51,6 +51,8 @@ contains
 
   ! 2-norm of a 3x3 matrix.
   function twonorm3x3(a)
+    implicit none
+
     real(kind=8),intent(in) :: a(3,3)
 
     real(kind=8) :: twonorm3x3
@@ -62,4 +64,15 @@ contains
     call dgesdd("N",3,3,b,3,S,b,3,b,3,work,100,iwork,info)
     twonorm3x3=S(1)
   end function twonorm3x3
+
+  ! exp(iunit*x). Sometimes it is much faster than the general
+  ! complex exponential.
+  function phexp(x)
+    implicit none
+
+    real(kind=8),intent(in) :: x
+    complex(kind=8) :: phexp
+
+    phexp=cmplx(cos(x),sin(x),kind=8)
+  end function phexp
 end module misc
