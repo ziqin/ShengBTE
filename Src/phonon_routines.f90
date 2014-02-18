@@ -385,9 +385,9 @@ contains
           end do
        end do
     end if
-    eps=epsilon
+    eps=transpose(epsilon)
     do i=1,nat
-       zeff(i,:,:)=born(:,:,i)
+       zeff(i,:,:)=transpose(born(:,:,i))
     end do
     read(1,*) qscell(1:3)
     ! Read the force constants.

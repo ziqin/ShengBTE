@@ -59,7 +59,8 @@ contains
        do iband=1,nbands
           do itri=1,Ntri
              factor1=phexp(dot_product(kspace(ik,:),R_j(:,itri)))/&
-                  sqrt(masses(Index_i(itri))*masses(Index_j(itri)))
+                  sqrt(masses(types(Index_i(itri)))*&
+                  masses(types(Index_j(itri))))
              do ialpha=1,3
                 factor2=factor1*conjg(eigenvect(ik,iband,&
                      3*(Index_i(itri)-1)+ialpha))
@@ -68,7 +69,7 @@ contains
                         3*(Index_j(itri)-1)+ibeta)
                    g(iband)=g(iband)+factor3*dot_product(&
                         Phi(ialpha,ibeta,:,itri),&
-                        (lattvec(:,Index_k(itri))+R_k(:,itri)))
+                        (positions(:,Index_k(itri))+R_k(:,itri)))
                 end do
              end do
           end do
