@@ -370,7 +370,7 @@ contains
     do i=1,nat
        read(1,*) j,tipo(i),r(i,1:3)
        tipo(i)=types(i)
-       r(i,1:3)=matmul(lattvec,positions(:,i))/lfactor
+       r(i,1:3)=matmul(lattvec,positions(:,i))/bohr2nm
     end do
     read(1,*) polar_key
     if(polar_key.eq."T") then
