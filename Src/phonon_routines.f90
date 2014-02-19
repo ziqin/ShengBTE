@@ -313,7 +313,7 @@ contains
     integer(kind=8),allocatable :: tipo(:)
     character(len=1) :: polar_key
     character(len=5),allocatable :: label(:)
-    real(kind=8) :: weight,total_weight,exp_g,sum,ck
+    real(kind=8) :: weight,total_weight,exp_g,ck
     real(kind=8) :: celldm(6),r_ws(3),rws(124,0:3),wscell(3,0:3)
     real(kind=8) :: alpha,geg,gmax,kt,gr,volume_r,dnrm2
     real(kind=8) :: cell_r(1:3,0:3),cell_g(1:3,0:3)
@@ -369,9 +369,9 @@ contains
     mass=masses/massfactor
     do i=1,nat
        read(1,*) j,tipo(i),r(i,1:3)
-       tipo(i)=types(i)
-       r(i,1:3)=matmul(lattvec,positions(:,i))/lfactor
     end do
+    tipo=types
+    r=transpose(matmul(lattvec,positions))/bohr2nm
     read(1,*) polar_key
     if(polar_key.eq."T") then
        do i=1,3
@@ -401,17 +401,8 @@ contains
     do i=1,3
        do j=1,3
           do iat=1,nat
-             sum=0.0d0
-             do jat=1,nat
-                do m1=1,scell(1)
-                   do m2=1,scell(2)
-                      do m3=1,scell(3)
-                         sum=sum+fc_s(i,j,iat,jat,m1,m2,m3)
-                      end do
-                   end do
-                end do
-             end do
-             fc_s(i,j,iat,iat,1,1,1)=fc_s(i,j,iat,iat,1,1,1)-sum
+             fc_s(i,j,iat,iat,1,1,1)=fc_s(i,j,iat,iat,1,1,1)-&
+                  sum(fc_s(i,j,iat,:,:,:,:))
           end do
        end do
     end do
@@ -465,9 +456,7 @@ contains
     gmax=14.
     alpha=(2.*pi/celldm(1))**2
     geg=gmax*4.*alpha
-    do i=1,3
-       ncell_g(i)=int(sqrt(geg)/cell_g(i,0))+1
-    end do
+    ncell_g=int(sqrt(geg)/cell_g(:,0))+1
 
     dyn_s=0.
     ddyn_s=0.
@@ -545,21 +534,15 @@ contains
              do m3=-ncell_g(3),ncell_g(3)
                 g(1:3)=m1*cell_g(1,1:3)+&
                      m2*cell_g(2,1:3)+m3*cell_g(3,1:3)
-                geg=g(1)*(eps(1,1)*g(1)+eps(1,2)*g(2)+eps(1,3)*g(3))+&
-                     g(2)*(eps(2,1)*g(1)+eps(2,2)*g(2)+eps(2,3)*g(3))+&
-                     g(3)*(eps(3,1)*g(1)+eps(3,2)*g(2)+eps(3,3)*g(3))
+                geg=dot_product(g(1:3),matmul(eps,g(1:3)))
                 if(geg.gt.0.0d0.and.geg/alpha/4.0d0.lt.gmax) then
                    exp_g=exp(-geg/alpha/4.0d0)/geg
                    do iat=1,nat
-                      zig(1:3)=g(1)*zeff(iat,1,1:3)+&
-                           g(2)*zeff(iat,2,1:3)+&
-                           g(3)*zeff(iat,3,1:3)
+                      zig(1:3)=matmul(g(1:3),zeff(iat,1:3,1:3))
                       auxi(1:3)=0.
                       do jat=1,nat
                          gr=dot_product(g(1:3),rr(iat,jat,1:3))
-                         zjg(1:3)=g(1)*zeff(jat,1,1:3)+&
-                              g(2)*zeff(jat,2,1:3)+&
-                              g(3)*zeff(jat,3,1:3)
+                         zjg(1:3)=matmul(g(1:3),zeff(jat,1:3,1:3))
                          auxi(1:3)=auxi(1:3)+zjg(1:3)*phexp(gr)
                       end do
                       do ipol=1,3
@@ -575,26 +558,15 @@ contains
                 g_old(0:3)=g(0:3)
                 do ik=1,nk
                    g(1:3)=g_old(1:3)+k(ik,1:3)
-                   geg=g(1)*(eps(1,1)*g(1)+eps(1,2)*g(2)+eps(1,3)*g(3))+&
-                        g(2)*(eps(2,1)*g(1)+eps(2,2)*g(2)+eps(2,3)*g(3))+&
-                        g(3)*(eps(3,1)*g(1)+eps(3,2)*g(2)+eps(3,3)*g(3))
+                   geg=dot_product(g(1:3),matmul(eps,g(1:3)))
                    if (geg.gt.0.0d0.and.geg/alpha/4.0d0.lt.gmax) then
                       exp_g=exp(-geg/alpha/4.0d0)/geg
-                      dgeg(1)=2.*eps(1,1)*g(1)+   eps(1,2)*g(2)+   eps(1,3)*g(3)+&
-                           eps(2,1)*g(2)+   eps(3,1)*g(3)
-                      dgeg(2)=   eps(2,1)*g(1)+2.*eps(2,2)*g(2)+   eps(2,3)*g(3)+&
-                           eps(1,2)*g(1)                 +   eps(3,2)*g(3)
-                      dgeg(3)=   eps(3,1)*g(1)+   eps(3,2)*g(2)+2.*eps(3,3)*g(3)+&
-                           eps(1,3)*g(1)+   eps(2,3)*g(2)
+                      dgeg=matmul(eps+transpose(eps),g(1:3))
                       do iat=1,nat
-                         zig(1:3)=g(1)*zeff(iat,1,1:3)+&
-                              g(2)*zeff(iat,2,1:3)+&
-                              g(3)*zeff(iat,3,1:3)
+                         zig(1:3)=matmul(g(1:3),zeff(iat,1:3,1:3))
                          do jat=1,nat
                             gr=dot_product(g(1:3),rr(iat,jat,1:3))
-                            zjg(1:3)=g(1)*zeff(jat,1,1:3)+&
-                                 g(2)*zeff(jat,2,1:3)+&
-                                 g(3)*zeff(jat,3,1:3)
+                            zjg(1:3)=matmul(g(1:3),zeff(jat,1:3,1:3))
                             do ipol=1,3
                                idim=(iat-1)*3+ipol
                                do jpol=1,3
@@ -616,47 +588,6 @@ contains
                 end do
              end do
           end do
-       end do
-       do ik=1,nk
-          g(1:3)=k(ik,1:3)
-          if(all(g(1:3).eq.0.d00)) then
-             if(ik==1) then
-                if(nk>1) then
-                   g(1:3)=k(ik,1:3)-k(ik+1,1:3)
-                else
-                   g(:)=0.d0
-                end if
-             else if(ik>1) then
-                if(all(k(ik-1,1:3).eq.0.d00).and.ik.lt.nk) then
-                   g(1:3)=k(ik,1:3)-k(ik+1,1:3)
-                else
-                   g(1:3)=k(ik,1:3)-k(ik-1,1:3)
-                end if
-             end if
-             geg=g(1)*(eps(1,1)*g(1)+eps(1,2)*g(2)+eps(1,3)*g(3))+&
-                  g(2)*(eps(2,1)*g(1)+eps(2,2)*g(2)+eps(2,3)*g(3))+&
-                  g(3)*(eps(3,1)*g(1)+eps(3,2)*g(2)+eps(3,3)*g(3))
-             if(geg>1d-8) then
-                do iat=1,nat
-                   zig(1:3)=g(1)*zeff(iat,1,1:3)+&
-                        g(2)*zeff(iat,2,1:3)+&
-                        g(3)*zeff(iat,3,1:3)
-                   do jat=1,nat
-                      zjg(1:3)=g(1)*zeff(jat,1,1:3)+&
-                           g(2)*zeff(jat,2,1:3)+&
-                           g(3)*zeff(jat,3,1:3)
-                      do ipol=1,3
-                         idim=(iat-1)*3+ipol
-                         do jpol=1,3
-                            jdim=(jat-1)*3+jpol
-                            dyn_g(ik,idim,jdim)=dyn_g(ik,idim,jdim)+&
-                                 zig(ipol)*zjg(jpol)/geg
-                         end do
-                      end do
-                   end do
-                end do
-             end if
-          end if
        end do
        dyn_g=dyn_g*8.*pi/volume_r
        ddyn_g=ddyn_g*8.*pi/volume_r
