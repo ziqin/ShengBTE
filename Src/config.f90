@@ -56,7 +56,11 @@ module config
 contains
 
   subroutine read_config()
-    integer(kind=4) :: i,j,k,ii,jj,kk,ll,info
+    implicit none
+
+    include "mpif.h"
+
+    integer(kind=4) :: i,j,k,ii,jj,kk,ll,info,ierr
     integer(kind=4) :: P(3)
     integer(kind=4),allocatable :: rtmp(:,:,:),ID_equi(:,:)
     logical,allocatable :: valid(:)
@@ -73,15 +77,18 @@ contains
     read(1,nml=allocations)
     if(norientations.lt.0) then
        if(myid.eq.0)write(error_unit,*) "Error: norientations must be >=0"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     if(nelements.lt.1.or.natoms.lt.1.or.natoms.lt.nelements) then
        if(myid.eq.0)write(error_unit,*) "Error: nelements,natoms must be >0, natoms must be >=nelements"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     if(any(ngrid.lt.1)) then
        if(myid.eq.0)write(error_unit,*) "Error: all components of ngrid must be must be >0"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     allocate(elements(nelements),types(natoms),positions(3,natoms),&
          masses(nelements),gfactors(nelements),born(3,3,natoms),&
@@ -103,16 +110,19 @@ contains
     read(1,nml=crystal)
     if(.not.all(scell.gt.0)) then
        if(myid.eq.0)write(error_unit,*) "Error: all supercell sizes must be >0"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     if(.not.all(types.ne.0)) then
        if(myid.eq.0)write(error_unit,*) "Error: atom types must be initialized correctly"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     do i=1,norientations
        if(all(orientations(:,i).eq.0)) then
           if(myid.eq.0)write(error_unit,*) "Error: orientation uninitialized or zero"
-          stop 1
+          call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+          call MPI_FINALIZE(ierr)
        end if
     end do
     T=-1.
@@ -126,15 +136,18 @@ contains
     read(1,nml=parameters)
     if(T.le.0.) then
        if(myid.eq.0)write(error_unit,*) "Error: T must be >0 K"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     if(rmin.le.0.or.rmax.le.rmin.or.dr.le.0) then
        if(myid.eq.0)write(error_unit,*) "Error: rmin and dr must be >0, and rmax must be > rmin"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     if(maxiter.le.0) then
        if(myid.eq.0)write(error_unit,*) "Error: maxiter must be >0"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     nonanalytic=.true.
     convergence=.true.
@@ -146,7 +159,8 @@ contains
     read(1,nml=flags)
     if(nanowires.and.norientations.eq.0) then
        if(myid.eq.0)write(error_unit,*) "Error: nanowires=.TRUE. but norientations=0"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     close(1)
 

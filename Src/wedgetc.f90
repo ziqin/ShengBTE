@@ -39,10 +39,12 @@ contains
   subroutine wedge(Nlist,Nequi,List,ALLEquiList,TypeofSymmetry)
     implicit none
 
+    include "mpif.h"
+
     integer(kind=4),intent(out) :: Nlist,Nequi(nptk),List(nptk)
     integer(kind=4),intent(out) :: ALLEquiList(Nsymm,nptk),TypeofSymmetry(Nsymm,nptk)
 
-    integer(kind=4) :: ID_equi(nsymm,nptk),ii,jj,ll,iaux,Ntot
+    integer(kind=4) :: ID_equi(nsymm,nptk),ii,jj,ll,iaux,Ntot,ierr
 
     integer(kind=4) :: NAllList,AllList(nptk),EquiList(nsymm)
 
@@ -74,7 +76,8 @@ contains
           EquiList(:)=ID_equi(:,ii)
           if(any(EquiList.eq.-1)) then
              if(myid.eq.0)write(error_unit,*) "Error: and incompatible symmetry was not removed"
-             stop 1
+             call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+             call MPI_FINALIZE(ierr)
           end if
           do ll=1,Nsymm
              iaux=1
@@ -109,7 +112,8 @@ contains
     if(myid.eq.0)write(*,*) "Info: Nlist =",Nlist
     if(ntot.ne.nptk) then
        if(myid.eq.0)write(error_unit,*) "Error: ntot!=nptk"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
   end subroutine wedge
 end module wedgetc

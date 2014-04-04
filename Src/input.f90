@@ -34,9 +34,12 @@ contains
   ! Read FORCE_CONSTANTS_2ND.
   subroutine read2fc(fc)
     implicit none
+
+    include "mpif.h"
+
     real(kind=8),allocatable,intent(out) :: fc(:,:,:,:,:,:,:)
     
-    integer(kind=4) :: ntot,atom1,atom2,i,j,ip
+    integer(kind=4) :: ntot,atom1,atom2,i,j,ip,ierr
     integer(kind=4) :: ix1,iy1,iz1,ix2,iy2,iz2,iatom1,iatom2
     real(kind=8) :: mm(natoms,natoms)
 
@@ -57,7 +60,8 @@ contains
     read(1,*) ntot
     if(ntot.ne.scell(1)*scell(2)*scell(3)*natoms) then
        if(myid.eq.0)write(error_unit,*) "Error: wrong number of force constants for the specified scell"
-       stop 1
+       call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+       call MPI_FINALIZE(ierr)
     end if
     do i=1,ntot
        do j=1,ntot

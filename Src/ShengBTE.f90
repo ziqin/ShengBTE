@@ -260,7 +260,8 @@ program ShengBTE
   ! Up to this point, no anharmonic information is used.
   if(onlyharmonic) then
      write(*,*) "Info: onlyharmonic=.true., stopping here"
-     stop 0
+     call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+     call MPI_FINALIZE(ierr)
   end if
 
   ! Load the anharmonic IFCs from FORCECONSTANTS_3RD.
