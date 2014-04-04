@@ -502,13 +502,11 @@ program ShengBTE
         end do
      end do
      write(aux,"(I0)") Nbands
-     if(myid.eq.0) then
-        open(1,file="BTE.w_final",status="replace")
-        do ll = 1,Nlist
-           write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau(:,ll)
-        end do
-        close(1)
-     end if
+     open(1,file="BTE.w_final",status="replace")
+     do ll = 1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau(:,ll)
+     end do
+     close(1)
      ! If results for nanowires have been requested, obtain a lower bound
      ! for the thermal conductivity along each crystallographic orientation
      ! by using the bulk RTA results.
@@ -568,10 +566,8 @@ program ShengBTE
      kappa_wires_reduce=0.d00
      kk=ceiling(float(nwires)/numprocs)
      do iorient=1,norientations
-        if(myid.eq.0) then
-           write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
-                iorient,":",orientations(:,iorient)
-        end if
+        write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
+             iorient,":",orientations(:,iorient)
         write(sorientation,"(I128)") iorient
         do ii=1,nptk
            do jj=1,Nbands
@@ -609,16 +605,14 @@ program ShengBTE
         end do
         call MPI_ALLREDUCE(kappa_wires_reduce,kappa_wires,Nbands*Nwires,&
              MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(myid.eq.0) then
-           write(aux,"(I0)") 3*nbands
-           open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
-           do ii=1,Nwires
-              radnw=radnw_range(ii)
-              write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
-                   kappa_wires(:,ii),sum(kappa_wires(:,ii))
-           end do
-           close(3001)
-        end if
+        write(aux,"(I0)") 3*nbands
+        open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
+        do ii=1,Nwires
+           radnw=radnw_range(ii)
+           write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
+                kappa_wires(:,ii),sum(kappa_wires(:,ii))
+        end do
+        close(3001)
      end do
   end if
 
