@@ -55,7 +55,7 @@ program ShengBTE
   real(kind=8),allocatable :: Phi(:,:,:,:),R_j(:,:),R_k(:,:)
 
   integer(kind=4) :: nlist,Ntotal_plus,Ntotal_minus
-  integer(kind=4),allocatable :: nequi(:),list(:),AllEquiList(:,:),TypeofSymmetry(:,:)
+  integer(kind=4),allocatable :: nequi(:),list(:),AllEquiList(:,:),TypeofSymmetry(:,:),eqclasses(:)
   integer(kind=4),allocatable :: N_plus(:),N_minus(:),N_plus_reduce(:),N_minus_reduce(:)
   integer(kind=4),allocatable :: Naccum_plus(:),Naccum_minus(:)
   integer(kind=4),allocatable :: Indof2ndPhonon_plus(:),Indof3rdPhonon_plus(:)
@@ -89,13 +89,21 @@ program ShengBTE
   allocate(F_n(nbands,nptk,3),F_n_0(nbands,nptk,3),F_n_aux(nbands,nptk))
   allocate(ThConductivity(nbands,3,3),kappa_wires(nbands,nwires),&
        kappa_wires_reduce(nbands,nwires))
-  allocate(Nequi(nptk),list(nptk),AllEquiList(nsymm,nptk),TypeOfSymmetry(nsymm,nptk))
+  allocate(Nequi(nptk),list(nptk),AllEquiList(nsymm,nptk),TypeOfSymmetry(nsymm,nptk),&
+       eqclasses(nptk))
   allocate(ffunc(nptk,nbands),v_or(nptk,nbands),F_or(nbands,nptk),kappa_or(nbands))
 
   ! Obtain the q-point equivalence classes defined by symmetry
   ! operations.
   call Id2Ind(IJK)
   call wedge(Nlist,Nequi,List,ALLEquiList,TypeofSymmetry)
+  do ll=1,Nlist
+     do kk=1,Nequi(ll)
+        eqclasses(ALLEquiList(kk,ll))=List(ll)
+     end do
+  end do
+  
+
   do ii=1,Ngrid(1)
      do jj=1,Ngrid(2)
         do kk=1,Ngrid(3)
@@ -111,6 +119,11 @@ program ShengBTE
      open(1,file="BTE.qpoints",status="replace")
      do ll=1,Nlist
         write(1,"(I9,x,I9,x,3(E20.10,x))") List(ll),Nequi(ll),q0(List(ll),:)
+     end do
+     close(1)
+     open(1,file="BTE.qpoints_full",status="replace")
+     do ll=1,nptk
+        write(1,"(I9,x,I9,x,3(E20.10,x))") ll,eqclasses(ll),q0(ll,:)
      end do
      close(1)
   end if
@@ -152,6 +165,10 @@ program ShengBTE
         write(1,"("//trim(adjustl(aux))//"E20.10)") velocity(list(ll),:,:)
      end do
      close(1)
+     open(1,file="BTE.v_full",status="replace")
+     do ll=1,nptk
+        write(1,"("//trim(adjustl(aux))//"E20.10)") velocity(ll,:,:)
+     end do
   end if
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
