@@ -187,7 +187,8 @@ Many files are created during a successful run of \textsc{ShengBTE}. They contai
 \item[\texttt{BTE.dos}:] the second column of this file contains the phonon density of states evaluated at the angular frequencies (in $\mathrm{rad/ps}$) specified by its first column
 \item[\texttt{BTE.pdos}:] the second and further column of this file contains the phonon density of states evaluated at the angular frequencies (in $\mathrm{rad/ps}$) specified by its first column and projected over each atom in the unit cell
 \item[\texttt{BTE.P3}]: volume in phase space available for three-phonon processes, for each irreducible $q$-point and phonon band
-\item[\texttt{BTE.P3\_total}:] sum of all the contributions in \texttt{BTE.P3}, total volume in phase space available for three-phonon processes.
+\item[\texttt{BTE.P3\_total}:] sum of all the contributions in \texttt{BTE.P3}, total volume in phase space available for three-phonon processes
+\item[\texttt{BTE.P3\_plus*}, \texttt{BTE.P3\_minus*}]: equivalents of \texttt{BTE.P3} and \texttt{BTE.P3\_total}, but including only contributions from emission (minus) or absorption (plus) processes
 \item[\texttt{BTE.gruneisen}]: Gr\"uneisen parameter for each irreducible $q$-point and phonon band
 \item[\texttt{BTE.gruneisen\_total}:] total Gr\"uneisen parameter obtained as a weighted sum of the mode contributions
 \item[\texttt{BTE.w\_isotopic}:] isotopic contribution to the scattering rate, for each $q$-point and each band, in $\mathrm{ps^{-1}}$
