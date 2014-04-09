@@ -301,8 +301,8 @@ contains
   ! similar to the rest of subroutines in this module. No matrix
   ! element is calculated in this case (compare with Ind_*) when an
   ! allowed process is detected. Instead, the amplitude of each
-  ! gaussian is added to the final result. Only absorption processes
-  ! need to be considered owing to symmetry.
+  ! gaussian is added to the final result. This subroutine computes the
+  ! absorption part.
   subroutine D_plus(mm,N_plus,energy,velocity,Nlist,List,IJK,P3_plus)
     implicit none
 
@@ -356,4 +356,57 @@ contains
     if(N_plus_count.ne.N_plus) write(error_unit,*) "Error: in D_plus, N_plus_count!=N_plus"
   end subroutine D_plus
 
+  ! Same as D_plus, but for emission processes.
+  subroutine D_minus(mm,N_minus,energy,velocity,Nlist,List,IJK,P3_minus)
+    implicit none
+
+    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk),N_minus
+    real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
+    real(kind=8),intent(out) :: P3_minus(N_minus)
+
+    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
+    integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
+    integer(kind=4) :: ii,jj,kk,ll
+    real(kind=8) :: sigma
+    real(kind=8) :: omega,omegap,omegadp
+
+    do ii=0,Ngrid(1)-1        ! G1 direction
+       do jj=0,Ngrid(2)-1     ! G2 direction
+          do kk=0,Ngrid(3)-1  ! G3 direction
+             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+          end do
+       end do
+    end do
+    N_minus_count=0
+    i=modulo(mm-1,Nbands)+1
+    ll=int((mm-1)/Nbands)+1
+    q=IJK(:,list(ll))
+    omega=energy(index_N(q(1),q(2),q(3)),i)
+    if(omega.ne.0) then
+       do j=1,Nbands
+          do ii=1,nptk
+             qprime=IJK(:,ii)
+             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             !--------BEGIN emission process-----------
+             do k=1,Nbands
+                qdprime=q-qprime
+                qdprime=modulo(qdprime,Ngrid)
+                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                if ((omegap.ne.0).and.(omegadp.ne.0)) then
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                   if(abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
+                      N_minus_count=N_minus_count+1
+                      P3_minus(N_minus_count)=exp(-(omega-omegap-omegadp)**2/(sigma**2))/&
+                           (sigma*sqrt(Pi)*nptk**2*nbands**3)
+                   end if
+                end if
+             end do ! k
+             !--------END emission process-------------!
+          end do ! ii
+       end do  ! j
+    end if
+    if(N_minus_count.ne.N_minus) write(error_unit,*) "Error: in D_minus, N_minus_count!=N_minus"
+  end subroutine D_minus
 end module processes

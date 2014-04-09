@@ -64,7 +64,8 @@ program ShengBTE
   integer(kind=4),allocatable :: Indof2ndPhonon_minus_reduce(:),Indof3rdPhonon_minus_reduce(:)
   real(kind=8) :: radnw,kappa_or_old
   real(kind=8),allocatable :: Gamma_plus(:),Gamma_minus(:)
-  real(kind=8),allocatable :: Pspace_partial(:,:),Pspace_total(:,:),Pspace_tmp(:)
+  real(kind=8),allocatable :: Pspace_plus_partial(:,:),Pspace_plus_total(:,:),Pspace_plus_tmp(:)
+  real(kind=8),allocatable :: Pspace_minus_partial(:,:),Pspace_minus_total(:,:),Pspace_minus_tmp(:)
   real(kind=8),allocatable :: Gamma_plus_reduce(:),Gamma_minus_reduce(:)
   real(kind=8),allocatable :: ffunc(:,:),radnw_range(:),v_or(:,:),F_or(:,:)
   real(kind=8),allocatable :: kappa_or(:),kappa_wires(:,:),kappa_wires_reduce(:,:)
@@ -337,39 +338,74 @@ program ShengBTE
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
 
   ! Obtain the phase space volume per mode and their sum.
-  allocate(Pspace_total(Nbands,Nlist),Pspace_partial(Nbands,Nlist),&
-       Pspace_tmp(maxval(N_plus)))
-  Pspace_total=0.
-  Pspace_partial=0.
+  allocate(Pspace_plus_total(Nbands,Nlist),Pspace_plus_partial(Nbands,Nlist),&
+       Pspace_plus_tmp(maxval(N_plus)))
+  allocate(Pspace_minus_total(Nbands,Nlist),Pspace_minus_partial(Nbands,Nlist),&
+       Pspace_minus_tmp(maxval(N_minus)))
+  Pspace_plus_total=0.
+  Pspace_plus_partial=0.
+  Pspace_minus_total=0.
+  Pspace_minus_partial=0.
   do mm=myid+1,Nbands*Nlist,numprocs
-     Pspace_tmp=0.
+     Pspace_plus_tmp=0.
      if(N_plus(mm).ne.0) then
         ii=modulo(mm-1,Nbands)+1
         jj=int((mm-1)/Nbands)+1
         call D_plus(mm,N_plus(mm),energy,velocity,Nlist,List,IJK,&
-             Pspace_tmp)
-        Pspace_partial(ii,jj)=Pspace_partial(ii,jj)+sum(Pspace_tmp)
+             Pspace_plus_tmp)
+        Pspace_plus_partial(ii,jj)=Pspace_plus_partial(ii,jj)+sum(Pspace_plus_tmp)
+     end if
+     Pspace_minus_tmp=0.
+     if(N_minus(mm).ne.0) then
+        ii=modulo(mm-1,Nbands)+1
+        jj=int((mm-1)/Nbands)+1
+        call D_minus(mm,N_minus(mm),energy,velocity,Nlist,List,IJK,&
+             Pspace_minus_tmp)
+        Pspace_minus_partial(ii,jj)=Pspace_minus_partial(ii,jj)+sum(Pspace_minus_tmp)
      end if
   end do
 
-  call MPI_ALLREDUCE(Pspace_partial,Pspace_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+  call MPI_ALLREDUCE(Pspace_plus_partial,Pspace_plus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+       MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_ALLREDUCE(Pspace_minus_partial,Pspace_minus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
        MPI_SUM,MPI_COMM_WORLD,ierr)
 
   if(myid.eq.0) then
+     open(1,file="BTE.P3_plus",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_plus_total(:,ll)
+     end do
+     close(1)
+     open(1,file="BTE.P3_minus",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_minus_total(:,ll)
+     end do
+     close(1)
      open(1,file="BTE.P3",status="replace")
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_total(:,ll)
+        write(1,"("//trim(adjustl(aux))//"E20.10)") 2.*(Pspace_plus_total(:,ll)+&
+             Pspace_minus_total(:,ll)/2.)/3.
      end do
      close(1)
      do ii=1,Nlist
-        Pspace_total(:,ii)=Pspace_total(:,ii)*Nequi(ii)
+        Pspace_plus_total(:,ii)=Pspace_plus_total(:,ii)*Nequi(ii)
      end do
+     open(1,file="BTE.P3_plus_total",status="replace")
+     write(1,*) sum(Pspace_plus_total)
+     close(1)
+     do ii=1,Nlist
+        Pspace_minus_total(:,ii)=Pspace_minus_total(:,ii)*Nequi(ii)
+     end do
+     open(1,file="BTE.P3_minus_total",status="replace")
+     write(1,*) sum(Pspace_minus_total)
+     close(1)
      open(1,file="BTE.P3_total",status="replace")
-     write(1,*) sum(Pspace_total)
+     write(1,*) 2.*(sum(Pspace_minus_total)+sum(Pspace_minus_total)/2.)/3.
      close(1)
   end if
 
-  deallocate(Pspace_total,Pspace_partial,Pspace_tmp)
+  deallocate(Pspace_plus_total,Pspace_plus_partial,Pspace_plus_tmp)
+  deallocate(Pspace_minus_total,Pspace_minus_partial,Pspace_minus_tmp)
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
