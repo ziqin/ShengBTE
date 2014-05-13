@@ -97,8 +97,10 @@ contains
           else
              dBE=(x/sinh(x))**2.
           end if
-          weight=weight+dBE
-          total_grun=total_grun+dBE*grun(ii,jj)
+          if(x.gt.1e-6) then
+             weight=weight+dBE
+             total_grun=total_grun+dBE*grun(ii,jj)
+          end if
        end do
     end do
     total_grun=total_grun/weight
