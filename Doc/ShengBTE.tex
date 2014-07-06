@@ -45,7 +45,7 @@ git clone git@bitbucket.org/sousaw/shengbte.git ShengBTE
 
 \noindent or from one of the many graphical frontends available.
 
-To compile the code it is enough to run \texttt{make} in the \texttt{Src} subdirectory of the distribution, but a suitable \texttt{arch.make} must be present in that directory. An example is provided as \texttt{Src/arch.make.example}. As a minimum, \texttt{\$MPIFC} must contain a valid command to compile Fortran 90 code with MPI directives, while the combination of \texttt{\$LDFLAGS} and \texttt{\$LIBS} must contain any linker flags required in order to link against an implementation of \textsc{Lapack} and against Atsushi Togo's \href{http://spglib.sourceforge.net/}{\nolinkurl{spglib}}. ShengBTE uses some Fortran 2003 extensions, most notably its new syntax for array initialization, and a recent Fortran compiler is required that supports them; gfortran 4.8.2 and ifort 12.0.0 are known to work.
+To compile the code it is enough to run \texttt{make} in the \texttt{Src} subdirectory of the distribution, but a suitable \texttt{arch.make} must be present in that directory. An example is provided as \texttt{Doc/arch.make.example}. As a minimum, \texttt{\$MPIFC} must contain a valid command to compile Fortran 90 code with MPI directives, while the combination of \texttt{\$LDFLAGS} and \texttt{\$LIBS} must contain any linker flags required in order to link against an implementation of \textsc{Lapack} and against Atsushi Togo's \href{http://spglib.sourceforge.net/}{\nolinkurl{spglib}}. ShengBTE uses some Fortran 2003 extensions, most notably its new syntax for array initialization, and a recent Fortran compiler is required that supports them; gfortran 4.8.2 and ifort 12.0.0 are known to work.
 
 After compilation succeeds, a \texttt{ShengBTE} binary will be created in the root directory of the distribution. This executable takes no command-line options and accepts no input from the terminal. It can be invoked simply as
 
@@ -177,15 +177,18 @@ The following is an example of one such block:
 Many files are created during a successful run of \textsc{ShengBTE}. They contain not only the thermal conductivity and related quantities, but also a set of intermediate results that may be useful to diagnose problems. This section includes a brief description of their contents.
 
 \begin{description}
-\item[\texttt{BTE.qpoints}:] the first column in this file contains the indices of a set of irreducible $q$-points in the Brillouin zone obtained starting with an $\mathtt{ngrid\left(1\right)}\times\mathtt{ngrid\left(2\right)}\times\mathtt{ngrid\left(3\right)}$ Monkhorst-Pack grid. The second column lists the corresponding degeneracies. The remaining three columns are the Cartesian coordinates of a representative $q$-point in each equivalence class.
+\item[\texttt{BTE.qpoints}:] the first column in this file contains the indices of a set of irreducible $q$-points in the Brillouin zone obtained starting with an $\mathtt{ngrid\left(1\right)}\times\mathtt{ngrid\left(2\right)}\times\mathtt{ngrid\left(3\right)}$ Monkhorst-Pack grid. The second column lists the corresponding degeneracies. The remaining three columns are the Cartesian coordinates of a representative $q$-point in each equivalence class
+\item[\texttt{BTE.qpoints\_full}:] this file lists all $q$-points used for the calculation. The first column is a sequentially increasing index, the second contains the index of the irreducible $q$-point equivalent to the point under consideration, and the three remaining columns are Cartesian coordinates.
 \item[\texttt{BTE.omega}:] phonon angular frequencies at each of those $q$-points, in $\mathrm{rad/ps}$
 \item[\texttt{BTE.v}:] group velocities of those modes, in $\mathrm{km/s}$ (or $\mathrm{nm}\,\mathrm{THz}$)
+\item[\texttt{BTE.v\_full}:] group velocities of all modes for all points listed in \texttt{BTE.qpoints\_full}
 \item[\texttt{BTE.cv}:] specific heat of the system, in $\mathrm{J/\left(m^3\,K\right)}$
 \item[\texttt{BTE.kappa\_sg}:] thermal conductivity per unit of mean free path in the small-grain limit, in $\mathrm{W/\left(m\,K\,nm\right)}$
 \item[\texttt{BTE.dos}:] the second column of this file contains the phonon density of states evaluated at the angular frequencies (in $\mathrm{rad/ps}$) specified by its first column
 \item[\texttt{BTE.pdos}:] the second and further column of this file contains the phonon density of states evaluated at the angular frequencies (in $\mathrm{rad/ps}$) specified by its first column and projected over each atom in the unit cell
 \item[\texttt{BTE.P3}]: volume in phase space available for three-phonon processes, for each irreducible $q$-point and phonon band
-\item[\texttt{BTE.P3\_total}:] sum of all the contributions in \texttt{BTE.P3}, total volume in phase space available for three-phonon processes.
+\item[\texttt{BTE.P3\_total}:] sum of all the contributions in \texttt{BTE.P3}, total volume in phase space available for three-phonon processes
+\item[\texttt{BTE.P3\_plus*}, \texttt{BTE.P3\_minus*}]: equivalents of \texttt{BTE.P3} and \texttt{BTE.P3\_total}, but including only contributions from emission (minus) or absorption (plus) processes
 \item[\texttt{BTE.gruneisen}]: Gr\"uneisen parameter for each irreducible $q$-point and phonon band
 \item[\texttt{BTE.gruneisen\_total}:] total Gr\"uneisen parameter obtained as a weighted sum of the mode contributions
 \item[\texttt{BTE.w\_isotopic}:] isotopic contribution to the scattering rate, for each $q$-point and each band, in $\mathrm{ps^{-1}}$

@@ -1,7 +1,7 @@
 &allocations
         nelements=2,
         natoms=2,
-        ngrid(:)=17 17 17
+        ngrid(:)=12 12 12
         norientations=2
 &end
 &crystal
@@ -29,6 +29,7 @@
 &parameters
         T=300.
         scalebroad=1.0
+
 &end
 &flags
         nonanalytic=.TRUE.

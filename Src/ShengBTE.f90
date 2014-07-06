@@ -55,7 +55,7 @@ program ShengBTE
   real(kind=8),allocatable :: Phi(:,:,:,:),R_j(:,:),R_k(:,:)
 
   integer(kind=4) :: nlist,Ntotal_plus,Ntotal_minus
-  integer(kind=4),allocatable :: nequi(:),list(:),AllEquiList(:,:),TypeofSymmetry(:,:)
+  integer(kind=4),allocatable :: nequi(:),list(:),AllEquiList(:,:),TypeofSymmetry(:,:),eqclasses(:)
   integer(kind=4),allocatable :: N_plus(:),N_minus(:),N_plus_reduce(:),N_minus_reduce(:)
   integer(kind=4),allocatable :: Naccum_plus(:),Naccum_minus(:)
   integer(kind=4),allocatable :: Indof2ndPhonon_plus(:),Indof3rdPhonon_plus(:)
@@ -64,7 +64,8 @@ program ShengBTE
   integer(kind=4),allocatable :: Indof2ndPhonon_minus_reduce(:),Indof3rdPhonon_minus_reduce(:)
   real(kind=8) :: radnw,kappa_or_old
   real(kind=8),allocatable :: Gamma_plus(:),Gamma_minus(:)
-  real(kind=8),allocatable :: Pspace_partial(:,:),Pspace_total(:,:),Pspace_tmp(:)
+  real(kind=8),allocatable :: Pspace_plus_partial(:,:),Pspace_plus_total(:,:),Pspace_plus_tmp(:)
+  real(kind=8),allocatable :: Pspace_minus_partial(:,:),Pspace_minus_total(:,:),Pspace_minus_tmp(:)
   real(kind=8),allocatable :: Gamma_plus_reduce(:),Gamma_minus_reduce(:)
   real(kind=8),allocatable :: ffunc(:,:),radnw_range(:),v_or(:,:),F_or(:,:)
   real(kind=8),allocatable :: kappa_or(:),kappa_wires(:,:),kappa_wires_reduce(:,:)
@@ -89,13 +90,21 @@ program ShengBTE
   allocate(F_n(nbands,nptk,3),F_n_0(nbands,nptk,3),F_n_aux(nbands,nptk))
   allocate(ThConductivity(nbands,3,3),kappa_wires(nbands,nwires),&
        kappa_wires_reduce(nbands,nwires))
-  allocate(Nequi(nptk),list(nptk),AllEquiList(nsymm,nptk),TypeOfSymmetry(nsymm,nptk))
+  allocate(Nequi(nptk),list(nptk),AllEquiList(nsymm,nptk),TypeOfSymmetry(nsymm,nptk),&
+       eqclasses(nptk))
   allocate(ffunc(nptk,nbands),v_or(nptk,nbands),F_or(nbands,nptk),kappa_or(nbands))
 
   ! Obtain the q-point equivalence classes defined by symmetry
   ! operations.
   call Id2Ind(IJK)
   call wedge(Nlist,Nequi,List,ALLEquiList,TypeofSymmetry)
+  do ll=1,Nlist
+     do kk=1,Nequi(ll)
+        eqclasses(ALLEquiList(kk,ll))=List(ll)
+     end do
+  end do
+  
+
   do ii=1,Ngrid(1)
      do jj=1,Ngrid(2)
         do kk=1,Ngrid(3)
@@ -111,6 +120,11 @@ program ShengBTE
      open(1,file="BTE.qpoints",status="replace")
      do ll=1,Nlist
         write(1,"(I9,x,I9,x,3(E20.10,x))") List(ll),Nequi(ll),q0(List(ll),:)
+     end do
+     close(1)
+     open(1,file="BTE.qpoints_full",status="replace")
+     do ll=1,nptk
+        write(1,"(I9,x,I9,x,3(E20.10,x))") ll,eqclasses(ll),q0(ll,:)
      end do
      close(1)
   end if
@@ -152,6 +166,10 @@ program ShengBTE
         write(1,"("//trim(adjustl(aux))//"E20.10)") velocity(list(ll),:,:)
      end do
      close(1)
+     open(1,file="BTE.v_full",status="replace")
+     do ll=1,nptk
+        write(1,"("//trim(adjustl(aux))//"E20.10)") velocity(ll,:,:)
+     end do
   end if
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
@@ -260,7 +278,8 @@ program ShengBTE
   ! Up to this point, no anharmonic information is used.
   if(onlyharmonic) then
      write(*,*) "Info: onlyharmonic=.true., stopping here"
-     stop 0
+     call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+     call MPI_FINALIZE(ierr)
   end if
 
   ! Load the anharmonic IFCs from FORCECONSTANTS_3RD.
@@ -319,39 +338,74 @@ program ShengBTE
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
 
   ! Obtain the phase space volume per mode and their sum.
-  allocate(Pspace_total(Nbands,Nlist),Pspace_partial(Nbands,Nlist),&
-       Pspace_tmp(maxval(N_plus)))
-  Pspace_total=0.
-  Pspace_partial=0.
+  allocate(Pspace_plus_total(Nbands,Nlist),Pspace_plus_partial(Nbands,Nlist),&
+       Pspace_plus_tmp(maxval(N_plus)))
+  allocate(Pspace_minus_total(Nbands,Nlist),Pspace_minus_partial(Nbands,Nlist),&
+       Pspace_minus_tmp(maxval(N_minus)))
+  Pspace_plus_total=0.
+  Pspace_plus_partial=0.
+  Pspace_minus_total=0.
+  Pspace_minus_partial=0.
   do mm=myid+1,Nbands*Nlist,numprocs
-     Pspace_tmp=0.
+     Pspace_plus_tmp=0.
      if(N_plus(mm).ne.0) then
         ii=modulo(mm-1,Nbands)+1
         jj=int((mm-1)/Nbands)+1
         call D_plus(mm,N_plus(mm),energy,velocity,Nlist,List,IJK,&
-             Pspace_tmp)
-        Pspace_partial(ii,jj)=Pspace_partial(ii,jj)+sum(Pspace_tmp)
+             Pspace_plus_tmp)
+        Pspace_plus_partial(ii,jj)=Pspace_plus_partial(ii,jj)+sum(Pspace_plus_tmp)
+     end if
+     Pspace_minus_tmp=0.
+     if(N_minus(mm).ne.0) then
+        ii=modulo(mm-1,Nbands)+1
+        jj=int((mm-1)/Nbands)+1
+        call D_minus(mm,N_minus(mm),energy,velocity,Nlist,List,IJK,&
+             Pspace_minus_tmp)
+        Pspace_minus_partial(ii,jj)=Pspace_minus_partial(ii,jj)+sum(Pspace_minus_tmp)
      end if
   end do
 
-  call MPI_ALLREDUCE(Pspace_partial,Pspace_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+  call MPI_ALLREDUCE(Pspace_plus_partial,Pspace_plus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+       MPI_SUM,MPI_COMM_WORLD,ierr)
+  call MPI_ALLREDUCE(Pspace_minus_partial,Pspace_minus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
        MPI_SUM,MPI_COMM_WORLD,ierr)
 
   if(myid.eq.0) then
+     open(1,file="BTE.P3_plus",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_plus_total(:,ll)
+     end do
+     close(1)
+     open(1,file="BTE.P3_minus",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_minus_total(:,ll)
+     end do
+     close(1)
      open(1,file="BTE.P3",status="replace")
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_total(:,ll)
+        write(1,"("//trim(adjustl(aux))//"E20.10)") 2.*(Pspace_plus_total(:,ll)+&
+             Pspace_minus_total(:,ll)/2.)/3.
      end do
      close(1)
      do ii=1,Nlist
-        Pspace_total(:,ii)=Pspace_total(:,ii)*Nequi(ii)
+        Pspace_plus_total(:,ii)=Pspace_plus_total(:,ii)*Nequi(ii)
      end do
+     open(1,file="BTE.P3_plus_total",status="replace")
+     write(1,*) sum(Pspace_plus_total)
+     close(1)
+     do ii=1,Nlist
+        Pspace_minus_total(:,ii)=Pspace_minus_total(:,ii)*Nequi(ii)
+     end do
+     open(1,file="BTE.P3_minus_total",status="replace")
+     write(1,*) sum(Pspace_minus_total)
+     close(1)
      open(1,file="BTE.P3_total",status="replace")
-     write(1,*) sum(Pspace_total)
+     write(1,*) 2.*(sum(Pspace_minus_total)+sum(Pspace_minus_total)/2.)/3.
      close(1)
   end if
 
-  deallocate(Pspace_total,Pspace_partial,Pspace_tmp)
+  deallocate(Pspace_plus_total,Pspace_plus_partial,Pspace_plus_tmp)
+  deallocate(Pspace_minus_total,Pspace_minus_partial,Pspace_minus_tmp)
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
@@ -502,13 +556,11 @@ program ShengBTE
         end do
      end do
      write(aux,"(I0)") Nbands
-     if(myid.eq.0) then
-        open(1,file="BTE.w_final",status="replace")
-        do ll = 1,Nlist
-           write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau(:,ll)
-        end do
-        close(1)
-     end if
+     open(1,file="BTE.w_final",status="replace")
+     do ll = 1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau(:,ll)
+     end do
+     close(1)
      ! If results for nanowires have been requested, obtain a lower bound
      ! for the thermal conductivity along each crystallographic orientation
      ! by using the bulk RTA results.
@@ -568,10 +620,8 @@ program ShengBTE
      kappa_wires_reduce=0.d00
      kk=ceiling(float(nwires)/numprocs)
      do iorient=1,norientations
-        if(myid.eq.0) then
-           write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
-                iorient,":",orientations(:,iorient)
-        end if
+        write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
+             iorient,":",orientations(:,iorient)
         write(sorientation,"(I128)") iorient
         do ii=1,nptk
            do jj=1,Nbands
@@ -609,16 +659,14 @@ program ShengBTE
         end do
         call MPI_ALLREDUCE(kappa_wires_reduce,kappa_wires,Nbands*Nwires,&
              MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(myid.eq.0) then
-           write(aux,"(I0)") 3*nbands
-           open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
-           do ii=1,Nwires
-              radnw=radnw_range(ii)
-              write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
-                   kappa_wires(:,ii),sum(kappa_wires(:,ii))
-           end do
-           close(3001)
-        end if
+        write(aux,"(I0)") 3*nbands
+        open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
+        do ii=1,Nwires
+           radnw=radnw_range(ii)
+           write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
+                kappa_wires(:,ii),sum(kappa_wires(:,ii))
+        end do
+        close(3001)
      end do
   end if
 

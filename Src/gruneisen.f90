@@ -69,7 +69,7 @@ contains
                         3*(Index_j(itri)-1)+ibeta)
                    g(iband)=g(iband)+factor3*dot_product(&
                         Phi(ialpha,ibeta,:,itri),&
-                        (positions(:,Index_k(itri))+R_k(:,itri)))
+                        (cartesian(:,Index_k(itri))+R_k(:,itri)))
                 end do
              end do
           end do
@@ -92,13 +92,11 @@ contains
     do jj=1,nbands
        do ii=1,nptk
           x=hbar*omega(ii,jj)/(2.*kB*T)
-          if(x.eq.0.) then
-             dBE=1.
-          else
+          if(x.gt.1e-6) then
              dBE=(x/sinh(x))**2.
+             weight=weight+dBE
+             total_grun=total_grun+dBE*grun(ii,jj)
           end if
-          weight=weight+dBE
-          total_grun=total_grun+dBE*grun(ii,jj)
        end do
     end do
     total_grun=total_grun/weight
