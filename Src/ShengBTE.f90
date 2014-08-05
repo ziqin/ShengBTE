@@ -375,7 +375,7 @@ program ShengBTE
      write(1,*) sum(Pspace_minus_total)
      close(1)
      open(1,file="BTE.P3_total",status="replace")
-     write(1,*) 2.*(sum(Pspace_minus_total)+sum(Pspace_minus_total)/2.)/3.
+     write(1,*) 2.*(sum(Pspace_plus_total)+sum(Pspace_minus_total)/2.)/3.
      close(1)
   end if
 
