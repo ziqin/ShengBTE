@@ -304,7 +304,7 @@ contains
     complex(kind=8),optional,intent(out) :: eigenvect(:,:,:)
 
     ! QE's 2nd-order files are in Ryd units.
-    real(kind=8),parameter :: bohr2nm=0.0529,toTHz=20670.687,&
+    real(kind=8),parameter :: bohr2nm=0.052917721092,toTHz=20670.687,&
          massfactor=1.8218779*6.022e-4
 
     integer(kind=4) :: ir,nreq,ntype,nat,ibrav,qscell(3)
