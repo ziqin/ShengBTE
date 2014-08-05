@@ -275,31 +275,6 @@ program ShengBTE
      end if
   end if
 
-  ! Up to this point, no anharmonic information is used.
-  if(onlyharmonic) then
-     write(*,*) "Info: onlyharmonic=.true., stopping here"
-     call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-     call MPI_FINALIZE(ierr)
-  end if
-
-  ! Load the anharmonic IFCs from FORCECONSTANTS_3RD.
-  call read3fc(Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
-
-  call mode_grun(energy,eigenvect,Ntri,Phi,R_j,R_k,&
-       Index_i,Index_j,Index_k,grun)
-  write(aux,"(I0)") Nbands
-  if(myid.eq.0) then
-     open(1,file="BTE.gruneisen",status="replace")
-     do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") grun(list(ll),:)
-     end do
-     close(1)
-     open(1,file="BTE.gruneisen_total",status="replace")
-     write(1,*) total_grun(energy,grun)
-     close(1)
-  end if
-  deallocate(grun)
-
   ! N_plus for absorption processes and N_minus for emission processes.
   allocate(N_plus(Nlist*Nbands),N_minus(Nlist*Nbands))
   N_plus=0
@@ -408,6 +383,31 @@ program ShengBTE
   deallocate(Pspace_minus_total,Pspace_minus_partial,Pspace_minus_tmp)
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+  ! Up to this point, no anharmonic information is used.
+  if(onlyharmonic) then
+     write(*,*) "Info: onlyharmonic=.true., stopping here"
+     call MPI_FINALIZE(ierr)
+     stop
+  end if
+
+  ! Load the anharmonic IFCs from FORCE_CONSTANTS_3RD.
+  call read3fc(Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+
+  call mode_grun(energy,eigenvect,Ntri,Phi,R_j,R_k,&
+       Index_i,Index_j,Index_k,grun)
+  write(aux,"(I0)") Nbands
+  if(myid.eq.0) then
+     open(1,file="BTE.gruneisen",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") grun(list(ll),:)
+     end do
+     close(1)
+     open(1,file="BTE.gruneisen_total",status="replace")
+     write(1,*) total_grun(energy,grun)
+     close(1)
+  end if
+  deallocate(grun)
 
   Naccum_plus(1)=0
   Naccum_minus(1)=0
