@@ -457,7 +457,7 @@ contains
     end do
 
     gmax=14.
-    alpha=(((rV/4.)**(1./3.))/bohr2nm)**2.
+    alpha=(2.*pi*bohr2nm/dnrm2(3,lattvec(:,1),1))**2
     geg=gmax*4.*alpha
     ncell_g=int(sqrt(geg)/cell_g(:,0))+1
 
