@@ -304,7 +304,7 @@ contains
     complex(kind=8),optional,intent(out) :: eigenvect(:,:,:)
 
     ! QE's 2nd-order files are in Ryd units.
-    real(kind=8),parameter :: bohr2nm=0.0529,toTHz=20670.687,&
+    real(kind=8),parameter :: bohr2nm=0.052917721092,toTHz=20670.687,&
          massfactor=1.8218779*6.022e-4
 
     integer(kind=4) :: ir,nreq,ntype,nat,ibrav,qscell(3)
@@ -314,7 +314,7 @@ contains
     character(len=1) :: polar_key
     character(len=5),allocatable :: label(:)
     real(kind=8) :: weight,total_weight,exp_g,ck
-    real(kind=8) :: celldm(6),r_ws(3),rws(124,0:3),wscell(3,0:3)
+    real(kind=8) :: celldm(6),r_ws(3),rws(124,0:3),wscell(3,0:3),at(3,3)
     real(kind=8) :: alpha,geg,gmax,kt,gr,volume_r,dnrm2
     real(kind=8) :: cell_r(1:3,0:3),cell_g(1:3,0:3)
     real(kind=8) :: zig(3),zjg(3),dgeg(3),t(0:3),g(0:3),g_old(0:3)
@@ -335,6 +335,9 @@ contains
     nk=size(kpoints,1)
     open(1,file="espresso.ifc2",status="old")
     read(1,*) ntype,nat,ibrav,celldm(1:6)
+    if (ibrav==0) then
+      read(1,*) ((at(i,j),i=1,3),j=1,3)
+    end if
     ntype=nelements
     nat=natoms
     ndim=3*nat
@@ -454,7 +457,7 @@ contains
     end do
 
     gmax=14.
-    alpha=(2.*pi/celldm(1))**2
+    alpha=(2.*pi*bohr2nm/dnrm2(3,lattvec(:,1),1))**2
     geg=gmax*4.*alpha
     ncell_g=int(sqrt(geg)/cell_g(:,0))+1
 
