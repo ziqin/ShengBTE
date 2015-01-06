@@ -27,16 +27,18 @@ contains
 
   ! Straightforward implementation of the thermal conductivity as an integral
   ! over the whole Brillouin zone in terms of frequencies, velocities and F_n.
-  subroutine TConduct(omega,velocity,F_n,ThConductivity)
+  subroutine TConduct(omega,velocity,F_n,ThConductivity,ThConductivityMode)
     implicit none
 
     real(kind=8),intent(in) :: omega(nptk,Nbands),velocity(nptk,Nbands,3),F_n(Nbands,nptk,3)
     real(kind=8),intent(out) :: ThConductivity(Nbands,3,3)
+    real(kind=8),intent(out) :: ThConductivityMode(nptk,Nbands,3,3)
 
     real(kind=8) :: fBE,tmp(3,3)
     integer(kind=4) :: ii,jj,dir1,dir2
 
     ThConductivity=0.d0
+    ThConductivityMode=0.d0
     do jj=1,Nbands
        do ii=2,nptk
           do dir1=1,3
@@ -46,9 +48,11 @@ contains
           end do
           fBE=1.d0/(exp(hbar*omega(ii,jj)/Kb/T)-1.D0)
           ThConductivity(jj,:,:)=ThConductivity(jj,:,:)+fBE*(fBE+1)*omega(ii,jj)*tmp
+          ThConductivityMode(ii,jj,:,:)=fBE*(fBE+1)*omega(ii,jj)*tmp
        end do
     end do
     ThConductivity=1e21*hbar**2*ThConductivity/(kB*T*T*V*nptk)
+    ThConductivityMode=1e21*hbar**2*ThConductivityMode/(kB*T*T*V*nptk)
   end subroutine TConduct
 
   ! Specialized version of the above subroutine for those cases where kappa
