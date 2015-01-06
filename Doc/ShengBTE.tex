@@ -180,6 +180,7 @@ Many files are created during a successful run of \textsc{ShengBTE}. They contai
 \item[\texttt{BTE.qpoints}:] the first column in this file contains the indices of a set of irreducible $q$-points in the Brillouin zone obtained starting with an $\mathtt{ngrid\left(1\right)}\times\mathtt{ngrid\left(2\right)}\times\mathtt{ngrid\left(3\right)}$ Monkhorst-Pack grid. The second column lists the corresponding degeneracies. The remaining three columns are the Cartesian coordinates of a representative $q$-point in each equivalence class
 \item[\texttt{BTE.qpoints\_full}:] this file lists all $q$-points used for the calculation. The first column is a sequentially increasing index, the second contains the index of the irreducible $q$-point equivalent to the point under consideration, and the three remaining columns are Cartesian coordinates.
 \item[\texttt{BTE.omega}:] phonon angular frequencies at each of those $q$-points, in $\mathrm{rad/ps}$
+\item[\texttt{BTE.omega\_full}:] phonon angular frequencies at each $q$-point in the Brillouin zone, in $\mathrm{rad/ps}$
 \item[\texttt{BTE.v}:] group velocities of those modes, in $\mathrm{km/s}$ (or $\mathrm{nm}\,\mathrm{THz}$)
 \item[\texttt{BTE.v\_full}:] group velocities of all modes for all points listed in \texttt{BTE.qpoints\_full}
 \item[\texttt{BTE.cv}:] specific heat of the system, in $\mathrm{J/\left(m^3\,K\right)}$
@@ -194,13 +195,17 @@ Many files are created during a successful run of \textsc{ShengBTE}. They contai
 \item[\texttt{BTE.w\_isotopic}:] isotopic contribution to the scattering rate, for each $q$-point and each band, in $\mathrm{ps^{-1}}$
 \item[\texttt{BTE.w\_anharmonic}:] contribution of three-phonon processes to the scattering rate, for each $q$-point and each band, in $\mathrm{ps^{-1}}$
 \item[\texttt{BTE.w}:] total zeroth-order scattering rate for each $q$-point and each band, in $\mathrm{ps^{-1}}$
-\item[\texttt{BTE.w\_final}:] total converged scattering rate for each $q$-point and each band, in $\mathrm{ps^{-1}}$
+\item[\texttt{BTE.w\_final}:] total converged scattering rate for each irreducible $q$-point and each band, in $\mathrm{ps^{-1}}$
+\item[\texttt{BTE.w\_final\_full}: ] total converged scattering rate for each $q$-point and each band, in $\mathrm{ps^{-1}}$
 \item[\texttt{BTE.kappa}:] tensorial contribution to the thermal conductivity from each band, in $\mathrm{W/\left(m\,K\right)}$. The last line contains converged values, the rest show the convergence process.
 \item[\texttt{BTE.kappa\_tensor}:] total thermal conductivity, a $3\times 3$ tensor expressed in $\mathrm{W/\left(m\,K\right)}$. The last line contains converged values, the rest show the convergence process.
 \item[\texttt{BTE.kappa\_scalar}:] average of diagonal elements of the thermal conductivity tensor, in $\mathrm{W/\left(m\,K\right)}$. The last line contains converged values, the rest show the convergence process.
+\item[\texttt{BTE.kappa\_mode}:]  tensorial contribution to the thermal conductivity from each mode, in $\mathrm{W/\left(m\,K\right)}$. Note that only the converged values are written out.
 \item[\texttt{BTE.kappa\_nw\_*}:] thermal conductivities of nanowires built along different directions of the bulk material, for different radii. The first column in each file is a diameter, the following $3\times\mathtt{natoms}$ contain the contributions of each band and the last column contains the total thermal conductivity. Diameters are expressed in $\mathrm{nm}$ and conductivities in $\mathrm{W/\left(m\,K\right)}$
 \item[\texttt{BTE.kappa\_nw\_*\_lower}:] lower bounds to the thermal conductivities of nanowires built along different directions of the bulk material, for different radii. The first column in each file is a diameter, the following $3\times\mathtt{natoms}$ contain the contributions of each band and the last column contains the total thermal conductivity. Diameters are expressed in $\mathrm{nm}$ and conductivities in $\mathrm{W/\left(m\,K\right)}$. Each lower bound is estimated by using the set of zeroth-order bulk relaxation times.
 \item[\texttt{BTE.cumulative\_kappa\_*}:] this set of files is analogous to \texttt{BTE.kappa*}, except in that their first column specifies a cutoff mean free path for phonons.
+\item[\texttt{BTE.w\_boundary}:] boundary scattering rate for each irreducible $q$-point and each mode, for a characteristic length $L=1\,\mathrm{nm}$ and a specularity parameter $p=0$. Rescale accordingly to obtain boundary scattering rates in $\mathrm{ps^{-1}}$.
+\item[\texttt{BTE.w\_boundary\_full}:] boundary scattering rate for each $q$-point and each mode, for a characteristic length $L=1\,\mathrm{nm}$ and a specularity parameter $p=0$. Rescale accordingly to obtain boundary scattering rates in $\mathrm{ps^{-1}}$.
 \end{description}
 
 \end{document}
