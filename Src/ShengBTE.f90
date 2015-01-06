@@ -531,15 +531,7 @@ program ShengBTE
      write(2003,"(I9,E20.10,E20.10)") 0,&
           sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
 
-    ! QIN:
-    !   In order to obtain the converged thermal conductivity considering boundary
-    ! scattering mechanism, the thermal conductivity of each mode (q,w) is necessary.
-    ! In fact, the converged thermal conductivity could be obtained by simply sum up
-    ! all the thermal conductivity of each mode (q,w) in BZ.
-    ! Since the converged thermal conductivity is obtained by integrating through the
-    ! whole BZ, the q-points should NOT be only those in IBZ, which means that the
-    ! index should start from 1 to the nptk while not the Nlist.
-     open(2004,file="BTE.kappa_mode",status="replace")       ! output the values in RTA
+     open(2004,file="BTE.kappa_mode",status="replace")
      do ll = 1,nptk
         write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
      end do
@@ -577,11 +569,6 @@ program ShengBTE
      close(2003)
 
      ! Write out the converged scattering rates.
-     !
-     ! QIN:
-     !   Write out the scattering rates arising from possible boundary scattering mechanism in low dimensional systems.
-     !   Note that the p and L are set to 0 and 1 respectively, which should be rescaled.
-     !
      do ll=1,Nlist
         do ii=1,Nbands
            tau(ii,ll)=dot_product(F_n(ii,List(ll),:),velocity(List(ll),ii,:))/&
@@ -598,12 +585,6 @@ program ShengBTE
      end do
      close(1)
      close(2)
-     ! Write out the converged scattering rates. (For all phonon modes in BZ)
-     !
-     ! QIN:
-     !   Write out the scattering rates arising from possible boundary scattering mechanism in low dimensional systems.
-     !   Note that the p and L are set to 0 and 1 respectively, which should be rescaled.
-     !
      do ll=1,nptk
         do ii=1,Nbands
            tau2(ii,ll)=dot_product(F_n(ii,ll,:),velocity(ll,ii,:))/&
