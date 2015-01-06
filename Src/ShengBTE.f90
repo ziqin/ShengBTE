@@ -41,10 +41,11 @@ program ShengBTE
   real(kind=8),allocatable :: grun(:,:)
 
   real(kind=8),allocatable :: rate_scatt(:,:),rate_scatt_reduce(:,:)
-  real(kind=8),allocatable :: tau_zero(:,:),tau(:,:)
+  real(kind=8),allocatable :: tau_zero(:,:),tau(:,:),tau_b(:,:),tau2(:,:),tau_b2(:,:)
   real(kind=8),allocatable :: dos(:,:),pdos(:,:,:),rate_scatt_isotope(:,:)
   real(kind=8),allocatable :: F_n(:,:,:),F_n_0(:,:,:),F_n_aux(:,:)
   real(kind=8),allocatable :: ThConductivity(:,:,:)
+  real(kind=8),allocatable :: ThConductivityMode(:,:,:,:)
   real(kind=8),allocatable :: ticks(:),cumulative_kappa(:,:,:,:)
 
   integer(kind=4) :: Ntri
@@ -88,7 +89,7 @@ program ShengBTE
   allocate(q0(nptk,3),velocity(nptk,nbands,3),velocity_z(nptk,nbands))
   allocate(IJK(3,nptk),Index_N(0:(ngrid(1)-1),0:(ngrid(2)-1),0:(ngrid(3)-1)))
   allocate(F_n(nbands,nptk,3),F_n_0(nbands,nptk,3),F_n_aux(nbands,nptk))
-  allocate(ThConductivity(nbands,3,3),kappa_wires(nbands,nwires),&
+  allocate(ThConductivity(nbands,3,3),ThConductivityMode(nptk,nbands,3,3),kappa_wires(nbands,nwires),&
        kappa_wires_reduce(nbands,nwires))
   allocate(Nequi(nptk),list(nptk),AllEquiList(nsymm,nptk),TypeOfSymmetry(nsymm,nptk),&
        eqclasses(nptk))
@@ -174,10 +175,15 @@ program ShengBTE
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
      open(1,file="BTE.omega",status="replace")
+     open(2,file="BTE.omega_full",status="replace")
      do ll=1,Nlist
         write(1,"("//trim(adjustl(aux))//"E20.10)") energy(list(ll),:)
      end do
+     do ll=1,nptk
+        write(2,"("//trim(adjustl(aux))//"E20.10)") energy(ll,:)
+     end do
      close(1)
+     close(2)
   end if
 
   ! Locally adaptive estimates of the total and projected densities of states.
@@ -285,7 +291,7 @@ program ShengBTE
   allocate(Naccum_plus(Nlist*Nbands),Naccum_minus(Nlist*Nbands))
   allocate(rate_scatt_reduce(Nbands,Nlist))
   rate_scatt_reduce=0.d0
-  allocate(rate_scatt(Nbands,Nlist),tau_zero(Nbands,Nlist),tau(Nbands,Nlist))
+  allocate(rate_scatt(Nbands,Nlist),tau_zero(Nbands,Nlist),tau(Nbands,Nlist),tau_b(Nbands,Nlist),tau2(Nbands,nptk),tau_b2(Nbands,nptk))
   rate_scatt=0.d0
   allocate(radnw_range(nwires))
   do ii=1,nwires
@@ -518,12 +524,27 @@ program ShengBTE
      open(2001,file="BTE.kappa",status="replace")
      open(2002,file="BTE.kappa_tensor",status="replace")
      open(2003,file="BTE.kappa_scalar",status="replace")
-     call TConduct(energy,velocity,F_n,ThConductivity)
+     call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
      write(aux,"(I0)") 9*Nbands
      write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") 0,ThConductivity
      write(2002,"(I9,9E20.10,E20.10)") 0,sum(ThConductivity,dim=1)
      write(2003,"(I9,E20.10,E20.10)") 0,&
           sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
+
+    ! QIN:
+    !   In order to obtain the converged thermal conductivity considering boundary
+    ! scattering mechanism, the thermal conductivity of each mode (q,w) is necessary.
+    ! In fact, the converged thermal conductivity could be obtained by simply sum up
+    ! all the thermal conductivity of each mode (q,w) in BZ.
+    ! Since the converged thermal conductivity is obtained by integrating through the
+    ! whole BZ, the q-points should NOT be only those in IBZ, which means that the
+    ! index should start from 1 to the nptk while not the Nlist.
+     open(2004,file="BTE.kappa_mode",status="replace")       ! output the values in RTA
+     do ll = 1,nptk
+        write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
+     end do
+     close(2004)
+
      ! Iterate to convergence if desired.
      if(convergence) then
         do ii=1,maxiter
@@ -532,7 +553,7 @@ program ShengBTE
                 Ntotal_plus,Ntotal_minus,Indof2ndPhonon_plus,Indof3rdPhonon_plus,&
                 Indof2ndPhonon_minus,Indof3rdPhonon_minus,energy,velocity,&
                 Gamma_plus,Gamma_minus,tau_zero,F_n)
-           call TConduct(energy,velocity,F_n,ThConductivity)
+           call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
            write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") ii,ThConductivity
            write(2002,"(I9,9E20.10)") ii,sum(ThConductivity,dim=1)
            write(2003,"(I9,E20.10)") ii,&
@@ -543,24 +564,63 @@ program ShengBTE
            write(*,*) "Info:","Relative change","=",relchange
            if(relchange.lt.eps)exit
         end do
+
+        open(2004,file="BTE.kappa_mode",status="replace")       ! output the converged values
+        do ll = 1,nptk
+           write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
+        end do
+        close(2004)
+
      end if
      close(2001)
      close(2002)
      close(2003)
 
      ! Write out the converged scattering rates.
+     !
+     ! QIN:
+     !   Write out the scattering rates arising from possible boundary scattering mechanism in low dimensional systems.
+     !   Note that the p and L are set to 0 and 1 respectively, which should be rescaled.
+     !
      do ll=1,Nlist
         do ii=1,Nbands
            tau(ii,ll)=dot_product(F_n(ii,List(ll),:),velocity(List(ll),ii,:))/&
                 (dot_product(velocity(List(ll),ii,:),velocity(List(ll),ii,:))*energy(List(ll),ii))
+           tau_b(ii,ll)=1/dot_product(velocity(List(ll),ii,:),velocity(List(ll),ii,:))
         end do
      end do
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_final",status="replace")
+     open(2,file="BTE.w_boundary",status="replace")
      do ll = 1,Nlist
         write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau(:,ll)
+        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b(:,ll)
      end do
      close(1)
+     close(2)
+     ! Write out the converged scattering rates. (For all phonon modes in BZ)
+     !
+     ! QIN:
+     !   Write out the scattering rates arising from possible boundary scattering mechanism in low dimensional systems.
+     !   Note that the p and L are set to 0 and 1 respectively, which should be rescaled.
+     !
+     do ll=1,nptk
+        do ii=1,Nbands
+           tau2(ii,ll)=dot_product(F_n(ii,ll,:),velocity(ll,ii,:))/&
+                (dot_product(velocity(ll,ii,:),velocity(ll,ii,:))*energy(ll,ii))
+           tau_b2(ii,ll)=1/dot_product(velocity(ll,ii,:),velocity(ll,ii,:))
+        end do
+     end do
+     write(aux,"(I0)") Nbands
+     open(1,file="BTE.w_final_full",status="replace")
+     open(2,file="BTE.w_boundary_full",status="replace")
+     do ll = 1,nptk
+        write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau2(:,ll)
+        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b2(:,ll)
+     end do
+     close(1)
+     close(2)
+
      ! If results for nanowires have been requested, obtain a lower bound
      ! for the thermal conductivity along each crystallographic orientation
      ! by using the bulk RTA results.
