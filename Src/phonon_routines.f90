@@ -83,13 +83,13 @@ contains
        kk=0
        do jj=1,nsymm
           if(ID_equi(jj,ii).eq.ii) then
-             newvelocity=newvelocity+matmul(crotations(:,:,jj),&
-                  transpose(velocity(ii,:,:)))
+             newvelocity=newvelocity+transpose(&
+                  matmul(crotations(:,:,jj),transpose(velocity(ii,:,:))))
              kk=kk+1
           end if
        end do
        if(kk.gt.1) then
-          velocity(ii,:,:)=transpose(newvelocity)/kk
+          velocity(ii,:,:)=newvelocity/kk
        end if
     end do
   end subroutine eigenDM
