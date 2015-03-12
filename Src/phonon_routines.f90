@@ -28,20 +28,18 @@ module phonon_routines
 contains
 
   ! Create the q-point grid and compute all relevant properties.
-  subroutine eigenDM(omega,eigenvect,velocity,NList,Nequi,List,AllEquilist,TypeofSymmetry)
+  subroutine eigenDM(omega,eigenvect,velocity)
     implicit none
 
     include "mpif.h"
 
     real(kind=8),intent(out) :: omega(nptk,nbands),velocity(nptk,nbands,3)
     complex(kind=8),intent(out) :: eigenvect(nptk,Nbands,Nbands)
-    integer(kind=4),intent(in) :: NList,Nequi(nptk),List(nptk)
-    integer(kind=4),intent(in) :: AllEquiList(Nsymm,nptk),TypeofSymmetry(Nsymm,nptk)
 
     real(kind=8),allocatable :: omega_reduce(:,:),velocity_reduce(:,:,:)
     complex(kind=8),allocatable :: eigenvect_reduce(:,:,:)
-    real(kind=8) :: kspace(nptk,3)
-    integer(kind=4) :: indexK,ii,jj,kk
+    real(kind=8) :: kspace(nptk,3),newvelocity(nbands,3)
+    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm,nptk)
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
        do jj=1,Ngrid(2)     ! rlattvec(:,2) direction
@@ -77,16 +75,22 @@ contains
     call MPI_ALLREDUCE(eigenvect_reduce,eigenvect,nptk*nbands*nbands,&
          MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,kk)
     deallocate(omega_reduce,velocity_reduce,eigenvect_reduce)
-    ! To better preserve symmetries, we make sure that group velocities are
-    ! equivalent q points are related through rotations.
-    do ii=1,Nlist
-       do jj=1,Nequi(ii)
-          omega(AllEquilist(jj,ii),:)=omega(list(ii),:)
-          do kk=1,Nbands
-             velocity(AllEquilist(jj,ii),kk,:)=&
-                  matmul(crotations(:,:,TypeofSymmetry(jj,ii)),velocity(list(ii),kk,:))
-          end do
+    ! Make sure that group velocities have the right symmetry at each q point.
+    ! This solves the problem of undefined components for degenerate modes.
+    call symmetry_map(ID_equi)
+    do ii=1,nptk
+       newvelocity=0.
+       kk=0
+       do jj=1,nsymm
+          if(ID_equi(jj,ii).eq.ii) then
+             newvelocity=newvelocity+transpose(&
+                  matmul(crotations(:,:,jj),transpose(velocity(ii,:,:))))
+             kk=kk+1
+          end if
        end do
+       if(kk.gt.1) then
+          velocity(ii,:,:)=newvelocity/kk
+       end if
     end do
   end subroutine eigenDM
 
