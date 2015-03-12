@@ -141,7 +141,7 @@ program ShengBTE
         write(*,*) "Info: expecting Phonopy 2nd-order format"
      end if
   end if
-  call eigenDM(energy,eigenvect,velocity,NList,Nequi,List,AllEquilist,TypeofSymmetry)
+  call eigenDM(energy,eigenvect,velocity)
   if(myid.eq.0)write(*,*) "Info: spectrum calculation finished"
 
   ! Compute the harmonic integrals: lattice specific heat and

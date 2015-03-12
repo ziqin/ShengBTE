@@ -1,7 +1,7 @@
 &allocations
         nelements=2,
         natoms=2,
-        ngrid(:)=24 24 24
+        ngrid(:)=12 12 12
 &end
 &crystal
         lfactor=0.5715017844,

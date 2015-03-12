@@ -1,0 +1,20 @@
+ Info: symmetry group F-43m detected
+ Info:           24  symmetry operations
+ Info: Ntot =        1728
+ Info: Nlist =         116
+ Info: about to obtain the spectrum
+ Info: expecting Quantum Espresso 2nd-order format
+ Info: spectrum calculation finished
+ Info: Ntotal_plus =     1185679
+ Info: Ntotal_minus =     1441736
+ Info: Iteration           1
+ Info:Relative change=  4.606349853342877E-002
+ Info: Iteration           2
+ Info:Relative change=  1.450305414878505E-002
+ Info: Iteration           3
+ Info:Relative change=  5.901666846931083E-004
+ Info: Iteration           4
+ Info:Relative change=  6.982759695957945E-005
+ Info: Iteration           5
+ Info:Relative change=  5.502177479872069E-006
+ Info: normal exit
