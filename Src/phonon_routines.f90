@@ -284,6 +284,11 @@ contains
        ! As is conventional, imaginary frequencies are returned as negative.
        omegas(ik,:)=sign(sqrt(abs(omega2)),omega2)
 
+       ! Remove the small noise from acoustic frequencies at Gamma.
+       if(ik.eq.1) then
+          omegas(ik,1:3)=0.d00
+       end if
+
        ! Group velocities are obtained perturbatively. This is very
        ! advatageous with respect to finite differences.
        do i=1,nbands
