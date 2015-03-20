@@ -92,6 +92,10 @@ contains
           velocity(ii,:,:)=newvelocity/kk
        end if
     end do
+    ! Make sure that acoustic frequencies and group velocities at Gamma
+    ! are exactly zero.
+    omega(1,1:3)=0.d0
+    velocity(1,1:3,:)=0.
   end subroutine eigenDM
 
   ! Compute phonon dispersions, Phonopy style.
@@ -283,11 +287,6 @@ contains
 
        ! As is conventional, imaginary frequencies are returned as negative.
        omegas(ik,:)=sign(sqrt(abs(omega2)),omega2)
-
-       ! Remove the small noise from acoustic frequencies at Gamma.
-       if(ik.eq.1) then
-          omegas(ik,1:3)=0.d00
-       end if
 
        ! Group velocities are obtained perturbatively. This is very
        ! advatageous with respect to finite differences.
