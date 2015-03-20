@@ -291,7 +291,8 @@ program ShengBTE
   allocate(Naccum_plus(Nlist*Nbands),Naccum_minus(Nlist*Nbands))
   allocate(rate_scatt_reduce(Nbands,Nlist))
   rate_scatt_reduce=0.d0
-  allocate(rate_scatt(Nbands,Nlist),tau_zero(Nbands,Nlist),tau(Nbands,Nlist),tau_b(Nbands,Nlist),tau2(Nbands,nptk),tau_b2(Nbands,nptk))
+  allocate(rate_scatt(Nbands,Nlist),tau_zero(Nbands,Nlist),tau(Nbands,Nlist),&
+       tau_b(Nbands,Nlist),tau2(Nbands,nptk),tau_b2(Nbands,nptk))
   rate_scatt=0.d0
   allocate(radnw_range(nwires))
   do ii=1,nwires
