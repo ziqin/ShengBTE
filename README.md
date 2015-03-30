@@ -60,16 +60,16 @@ The contents of this file describe the system to be studied and specify a set of
     - `orientations` (integer, 3 x `norientations`, mandatory unless `norientations`==0): terns of integer indices defining the crystallographic directions along which to study nanowires
 - `&parameters` namelist:
     - `T` (real, K, mandatory): temperature to be used in all calculations
-    - `scalebroad` (real, default=$1.0$): scale parameter for Gaussian smearing. The default is theoretically guaranteed to work, but significant speedups can sometimes be achieved by reducing it, with negligible loss of precision.
+    - `scalebroad` (real, default=1.0): scale parameter for Gaussian smearing. The default is theoretically guaranteed to work, but significant speedups can sometimes be achieved by reducing it, with negligible loss of precision.
     - `rmin` (real, nm, default=5.0): minimum radius of nanowires whose thermal conductivity will be computed
     - `rmax` (real, nm, default=505.0): maximum radius of nanowires whose thermal conductivity will be computed
     - `dr` (real, nm, default=100.0): radius increment to be used when simulating nanowires from `rmin` to `rmax`
     - `maxiter` (integer, default=1000): maximum number of iterations allowed in the BTE convergence process
     - `nticks` (integer, default=100): number of different values of the mean free path at which to compute the cumulative thermal conductivity
-    - `eps` (real, default=10<sup>-5</sup>): the iterative solver of the BTE will stop when the relative change in the thermal conductivity tensor is less than `eps`. Such change between steps n-1 and n is measured as ||&Kappa;<sub>n</sub>-&Kappa;<sub>n-1</sub>||, where ||&sdot;||  denotes a matrix $2$-norm.
+    - `eps` (real, default=10<sup>-5</sup>): the iterative solver of the BTE will stop when the relative change in the thermal conductivity tensor is less than `eps`. Such change between steps n-1 and n is measured as ||&Kappa;<sub>n</sub>-&Kappa;<sub>n-1</sub>||, where ||&sdot;||  denotes a matrix 2-norm.
 - `&flags` namelist:
     - `nonanalytic` (logical, default=.true.): compute and use the nonanalytic part of the dynamical matrix
-    - `convergence` (logical, default=.true.$): if true, iterate the BTE solver until convergence is achieved. If false, compute thermal conductivities in the relaxation time approximation.
+    - `convergence` (logical, default=.true.): if true, iterate the BTE solver until convergence is achieved. If false, compute thermal conductivities in the relaxation time approximation.
     - `isotopes` (logical, default=.true.): include isotopic scattering in the relaxation times
     - `autoisotopes` (logical, default=.true.): compute atomic masses and g factors automatically
     - `nanowires` (logical, default=.false.): study the thermal conductivity of nanowires in addition to that of the bulk
@@ -92,7 +92,7 @@ Similarly, this file contains the third-order interatomic force constant matrix,
 - A 1-based sequential index
 - A line with the Cartesian coordinates of the second unit cell in &Aring;
 - A line with the Cartesian coordinates of the third unit cell in &Aring;
-- A line with the $1$-based indices of the three atoms involved, each from 1 to `natoms`
+- A line with the 1-based indices of the three atoms involved, each from 1 to `natoms`
 - 27 lines, each of which starts with a tern of integers specifying three Cartesian axes and is completed by a force constant in eV/&Aring;<sup>3</sup>. The last element of the tern changes first.
 
 The following is an example of one such block:
@@ -136,14 +136,14 @@ The following is an example of one such block:
 
 Many files are created during a successful run of `ShengBTE`. They contain not only the thermal conductivity and related quantities, but also a set of intermediate results that may be useful to diagnose problems. This section includes a brief description of their contents.
 
-- `BTE.qpoints`: the first column in this file contains the indices of a set of irreducible q points in the Brillouin zone obtained starting with an `ngrid(1)` x `ngrid(2)` x `ngrid(3)` &Gamma;-centered regular grid. The second column lists the corresponding degeneracies. The remaining three columns are the Cartesian coordinates of a representative $q$-point in each equivalence class.
+- `BTE.qpoints`: the first column in this file contains the indices of a set of irreducible q points in the Brillouin zone obtained starting with an `ngrid(1)` x `ngrid(2)` x `ngrid(3)` &Gamma;-centered regular grid. The second column lists the corresponding degeneracies. The remaining three columns are the Cartesian coordinates of a representative q point in each equivalence class.
 - `BTE.qpoints_full`: this file lists all q points used for the calculation. The first column is a sequentially increasing index, the second contains the index of the irreducible q point equivalent to the point under consideration, and the three remaining columns are Cartesian coordinates.
 - `BTE.omega`: phonon angular frequencies at each of those q points, in rad/ps.
 - `BTE.omega_full`: phonon angular frequencies at each q point in the Brillouin zone, in rad/ps
 - `BTE.v`: group velocities of those modes, in km/s (or nm THz)
 - `BTE.v_full`: group velocities of all modes for all points listed in `BTE.qpoints_full`
 - `BTE.cv`: specific heat of the system, in J/\(m<sup>3</sup> K)
-- `BTE.kappa_sg`: thermal conductivity per unit of mean free path in the small-grain limit, in W/(m K nm)$
+- `BTE.kappa_sg`: thermal conductivity per unit of mean free path in the small-grain limit, in W/(m K nm)
 - `BTE.dos`: the second column of this file contains the phonon density of states evaluated at the angular frequencies (in rad/ps) specified by its first column
 - `BTE.pdos`: the second and further columns of this file contain the phonon density of states evaluated at the angular frequencies (in rad/ps) specified by its first column and projected over each atom in the unit cell
 - `BTE.P3`: volume in phase space available for three-phonon processes, for each irreducible q point and phonon band
@@ -152,7 +152,7 @@ Many files are created during a successful run of `ShengBTE`. They contain not o
 - `BTE.gruneisen`: Grüneisen parameter for each irreducible q point and phonon band
 - `BTE.gruneisen_total`: total Grüneisen parameter obtained as a weighted sum of the mode contributions
 - `BTE.w_isotopic`: isotopic contribution to the scattering rate, for each q point and each band, in ps<sup>-1</sup>
-- `BTE.w_anharmonic`: contribution of three-phonon processes to the scattering rate, for each $q$-point and each band, in ps<sup>-1</sup>
+- `BTE.w_anharmonic`: contribution of three-phonon processes to the scattering rate, for each q point and each band, in ps<sup>-1</sup>
 - `BTE.w`: total zeroth-order scattering rate for each q point and each band, in ps<sup>-1</sup>
 - `BTE.w_final`: total converged scattering rate for each irreducible q point and each band, in ps<sup>-1</sup>
 - `BTE.w_final_full`: total converged scattering rate for each q point and each band, in ps<sup>-1</sup>
