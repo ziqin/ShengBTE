@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -27,13 +27,14 @@ program ShengBTE
   use conductivity
   use scaling
   use phonon_routines
+  use dos_routines
   use gruneisen
   use integrals
   implicit none
 
   include "mpif.h"
 
-  real(kind=8) :: omega,sigma,kappa_sg(3,3),kappa_old(3,3),relchange
+  real(kind=8) :: kappa_sg(3,3),kappa_old(3,3),relchange
   integer(kind=4) :: i,j,ii,jj,kk,ll,mm,nn
   real(kind=8),allocatable :: energy(:,:),q0(:,:),velocity(:,:,:),velocity_z(:,:)
   complex(kind=8),allocatable :: eigenvect(:,:,:)
@@ -187,27 +188,13 @@ program ShengBTE
   end if
 
   ! Locally adaptive estimates of the total and projected densities of states.
-  allocate(dos(Nbands,Nlist),pdos(Nbands,Nlist,natoms),&
-       rate_scatt_isotope(Nbands,Nlist))
-  dos=0.d0
-  pdos=0.d0
-  rate_scatt_isotope=0.d0
+  allocate(dos(Nbands,Nlist))
+  allocate(pdos(Nbands,Nlist,natoms))
+  allocate(rate_scatt_isotope(Nbands,Nlist))
 
-  do mm=1,Nlist
-     do nn=1,Nbands
-        omega=energy(list(mm),nn)
-        do ii=1,nptk
-           do jj=1,Nbands
-              sigma=base_sigma(velocity(ii,jj,:))
-              if(abs(omega-Energy(ii,jj)).lt.2.5*sigma) then
-                 dos(nn,mm)=dos(nn,mm)+exp(-(omega-Energy(ii,jj))**2/(sigma**2))/sigma/sqrt(pi)
-              end if
-           end do
-        end do
-     end do
-  end do
-  dos=dos/float(nptk)
-
+  call calc_dos(energy,velocity,eigenvect,nlist,list,&
+       dos,pdos,rate_scatt_isotope)
+  
   if(myid.eq.0) then
      open(1,file="BTE.dos",status="replace")
      do mm=1,Nlist
@@ -216,71 +203,23 @@ program ShengBTE
         end do
      end do
      close(1)
-  end if
-
-  do mm=1,Nlist
-     do nn=1,Nbands
-        omega=energy(list(mm),nn)
-        do ii=1,nptk
-           do jj=1,Nbands
-              sigma=base_sigma(velocity(ii,jj,:))
-              if(abs(omega-Energy(ii,jj)).lt.2.5*sigma) then
-                 do kk=1,natoms
-                    pdos(nn,mm,kk)=pdos(nn,mm,kk)+&
-                         exp(-(omega-Energy(ii,jj))**2/(sigma**2))/sigma/sqrt(Pi)*&
-                         (abs(dot_product(eigenvect(list(mm),nn,((kk-1)*3+1):((kk-1)*3+3)),&
-                         eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)))))**2
-                 end do
-              end if
-           end do
-        end do
-     end do
-  end do
-  pdos=pdos/float(nptk)
-
-  write(aux,"(I0)") Natoms
-  if(myid.eq.0) then
+     write(aux,"(I0)") Natoms
      open(1,file="BTE.pdos",status="replace")
      do mm=1,Nlist
         do nn=1,Nbands
-           write(1,"(E25.17,"//trim(adjustl(aux))//"E25.17)") energy(list(mm),nn),pdos(nn,mm,:)
+           write(1,"(E25.17,"//trim(adjustl(aux))//"E25.17)")&
+                energy(list(mm),nn),pdos(nn,mm,:)
         end do
      end do
      close(1)
-  end if
-
-  ! Isotopic scattering, closely related to the projected DOS.
-  if(isotopes) then
-     do mm=1,Nlist
-        do nn=1,Nbands
-           omega=energy(list(mm),nn)
-           do ii=1,nptk
-              do jj=1,Nbands
-                 sigma=base_sigma(velocity(ii,jj,:))
-                 if(abs(omega-Energy(ii,jj)).lt.2.5*sigma) then
-                    do kk=1,natoms
-                       rate_scatt_isotope(nn,mm)=rate_scatt_isotope(nn,mm)+&
-                            exp(-(omega-Energy(ii,jj))**2/(sigma**2))/sigma/sqrt(Pi)*&
-                            (abs(dot_product(eigenvect(list(mm),nn,((kk-1)*3+1):((kk-1)*3+3)),&
-                            eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3))))**2*gfactors(types(kk)))
-                    end do
-                 end if
-              end do
-           end do
-           rate_scatt_isotope(nn,mm)=rate_scatt_isotope(nn,mm)/(2.d0*nptk)*pi*omega**2
-        end do
-     end do
-
      write(aux,"(I0)") Nbands
-     if(myid.eq.0) then
-        open(1,file="BTE.w_isotopic",status="replace")
-        do ll=1,Nlist
-           write(1,"("//trim(adjustl(aux))//"E20.10)") rate_scatt_isotope(:,ll)
-        end do
-        close(1)
-     end if
+     open(1,file="BTE.w_isotopic",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") rate_scatt_isotope(:,ll)
+     end do
+     close(1)
   end if
-
+  
   ! N_plus for absorption processes and N_minus for emission processes.
   allocate(N_plus(Nlist*Nbands),N_minus(Nlist*Nbands))
   N_plus=0
