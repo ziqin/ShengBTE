@@ -42,39 +42,39 @@ Exactly three files are required for a `ShengBTE` run: `CONTROL`, one of `FORCE_
 The contents of this file describe the system to be studied and specify a set of parameters and flags controlling execution. Its format is merely a sequence of four Fortran [namelists](http://publib.boulder.ibm.com/infocenter/lnxpcomp/v8v101/index.jsp?topic=%2Fcom.ibm.xlf101l.doc%2Fxlflr%2Fnamelistio.htm), with a reasonably flexible syntax that should become apparent after looking at the example `Test-*/CONTROL` for zincblence InAs and GaAs. Some parameters and flags are mandatory, whereas others are optional and take a default value when unspecified.
 
 - `&allocations` namelist:
-  - `nelements` (integer, mandatory): number of different elements in the compound
-  - `natoms` (integer, mandatory): number of atoms in the unit cell
-  - `ngrid` (integer, 3, mandatory): number of grid planes along each axis in reciprocal space
-  - `norientations` (integer, default=0): number of orientations along which to study nanowires
+    - `nelements` (integer, mandatory): number of different elements in the compound
+    - `natoms` (integer, mandatory): number of atoms in the unit cell
+    - `ngrid` (integer, 3, mandatory): number of grid planes along each axis in reciprocal space
+    - `norientations` (integer, default=0): number of orientations along which to study nanowires
 - `&crystal` namelist:
-  - `lfactor` (real, nm, default=1.0): unit of measurement for lattice vectors
-  - `lattvec` (real, 3 x 3, mandatory): real-space lattice vectors, in units of `lfactor`
-  - `types` (integer, `natoms`, mandatory): a vector of `natom` integers, ranging from 1 to `nelements`, assigning an element to each atom in the system
-  - `elements` (string, `nelements`, mandatory): a vector of element names
-  - `positions` (real, 3 x `natoms`, mandatory): atomic positions in lattice coordinates
-  - `masses` (real, `nelements`, g/mol, default=automatic): atomic masses corresponding to each element. If they are omitted and `autoisotopes` is true and the element names are known, they are computed automatically.
-  - `gfactors` (real, `nelements`, default=automatic): g factors for isotopic scattering associated to each element. If they are omitted and `autoisotopes` is true and the element names are known, they are computed automatically.
-  - `epsilon` (real, 3 x 3, &Epsilon;<sub>0</sub>, default=1): dielectric tensor of the system in the Cartesian basis
-  - `born` (real, 3 x 3 x `natoms`, e, default=0): Born effective charge tensor of each atom in the Cartesian basis
-  - `scell` (integer, 3, mandatory): supercell sizes along each crystal axis used for the 2nd-order force constant calculation
-  - `orientations` (integer, 3 x `norientations`, mandatory unless `norientations`==0): terns of integer indices defining the crystallographic directions along which to study nanowires
+    - `lfactor` (real, nm, default=1.0): unit of measurement for lattice vectors
+    - `lattvec` (real, 3 x 3, mandatory): real-space lattice vectors, in units of `lfactor`
+    - `types` (integer, `natoms`, mandatory): a vector of `natom` integers, ranging from 1 to `nelements`, assigning an element to each atom in the system
+    - `elements` (string, `nelements`, mandatory): a vector of element names
+    - `positions` (real, 3 x `natoms`, mandatory): atomic positions in lattice coordinates
+    - `masses` (real, `nelements`, g/mol, default=automatic): atomic masses corresponding to each element. If they are omitted and `autoisotopes` is true and the element names are known, they are computed automatically.
+    - `gfactors` (real, `nelements`, default=automatic): g factors for isotopic scattering associated to each element. If they are omitted and `autoisotopes` is true and the element names are known, they are computed automatically.
+    - `epsilon` (real, 3 x 3, &Epsilon;<sub>0</sub>, default=1): dielectric tensor of the system in the Cartesian basis
+    - `born` (real, 3 x 3 x `natoms`, e, default=0): Born effective charge tensor of each atom in the Cartesian basis
+    - `scell` (integer, 3, mandatory): supercell sizes along each crystal axis used for the 2nd-order force constant calculation
+    - `orientations` (integer, 3 x `norientations`, mandatory unless `norientations`==0): terns of integer indices defining the crystallographic directions along which to study nanowires
 - `&parameters` namelist:
-  - `T` (real, K, mandatory): temperature to be used in all calculations
-  - `scalebroad` (real, default=$1.0$): scale parameter for Gaussian smearing. The default is theoretically guaranteed to work, but significant speedups can sometimes be achieved by reducing it, with negligible loss of precision.
-  - `rmin` (real, nm, default=5.0): minimum radius of nanowires whose thermal conductivity will be computed
-  - `rmax` (real, nm, default=505.0): maximum radius of nanowires whose thermal conductivity will be computed
-  - `dr` (real, nm, default=100.0): radius increment to be used when simulating nanowires from `rmin` to `rmax`
-  - `maxiter` (integer, default=1000): maximum number of iterations allowed in the BTE convergence process
-  - `nticks` (integer, default=100): number of different values of the mean free path at which to compute the cumulative thermal conductivity
-  - `eps` (real, default=10<sup>-5</sup>): the iterative solver of the BTE will stop when the relative change in the thermal conductivity tensor is less than `eps`. Such change between steps n-1 and n is measured as ||&Kappa;<sub>n</sub>-&Kappa;<sub>n-1</sub>||, where ||&sdot;||  denotes a matrix $2$-norm.
+    - `T` (real, K, mandatory): temperature to be used in all calculations
+    - `scalebroad` (real, default=$1.0$): scale parameter for Gaussian smearing. The default is theoretically guaranteed to work, but significant speedups can sometimes be achieved by reducing it, with negligible loss of precision.
+    - `rmin` (real, nm, default=5.0): minimum radius of nanowires whose thermal conductivity will be computed
+    - `rmax` (real, nm, default=505.0): maximum radius of nanowires whose thermal conductivity will be computed
+    - `dr` (real, nm, default=100.0): radius increment to be used when simulating nanowires from `rmin` to `rmax`
+    - `maxiter` (integer, default=1000): maximum number of iterations allowed in the BTE convergence process
+    - `nticks` (integer, default=100): number of different values of the mean free path at which to compute the cumulative thermal conductivity
+    - `eps` (real, default=10<sup>-5</sup>): the iterative solver of the BTE will stop when the relative change in the thermal conductivity tensor is less than `eps`. Such change between steps n-1 and n is measured as ||&Kappa;<sub>n</sub>-&Kappa;<sub>n-1</sub>||, where ||&sdot;||  denotes a matrix $2$-norm.
 - `&flags` namelist:
-  - `nonanalytic` (logical, default=.true.): compute and use the nonanalytic part of the dynamical matrix
-  - `convergence` (logical, default=.true.$): if true, iterate the BTE solver until convergence is achieved. If false, compute thermal conductivities in the relaxation time approximation.
-  - `isotopes` (logical, default=.true.): include isotopic scattering in the relaxation times
-  - `autoisotopes` (logical, default=.true.): compute atomic masses and g factors automatically
-  - `nanowires` (logical, default=.false.): study the thermal conductivity of nanowires in addition to that of the bulk
-  - `onlyharmonic` (logical, default=.false.): stop the program after computing the specific heat and small-grain thermal conductivity
-  - `espresso` (logical, default=.false.): read second-order force constants from `espresso.ifc2` (Quantum Espresso format) instead of the default `FORCE_CONSTANTS_2ND` (Phonopy format)
+    - `nonanalytic` (logical, default=.true.): compute and use the nonanalytic part of the dynamical matrix
+    - `convergence` (logical, default=.true.$): if true, iterate the BTE solver until convergence is achieved. If false, compute thermal conductivities in the relaxation time approximation.
+    - `isotopes` (logical, default=.true.): include isotopic scattering in the relaxation times
+    - `autoisotopes` (logical, default=.true.): compute atomic masses and g factors automatically
+    - `nanowires` (logical, default=.false.): study the thermal conductivity of nanowires in addition to that of the bulk
+    - `onlyharmonic` (logical, default=.false.): stop the program after computing the specific heat and small-grain thermal conductivity
+    - `espresso` (logical, default=.false.): read second-order force constants from `espresso.ifc2` (Quantum Espresso format) instead of the default `FORCE_CONSTANTS_2ND` (Phonopy format)
 
 ### The `FORCE_CONSTANTS_2ND` file
 
