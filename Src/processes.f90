@@ -32,17 +32,16 @@ module processes
 contains
 
   ! Compute one of the matrix elements involved in the calculation of Ind_plus.
-  function Vp_plus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
-       eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+  function Vp_plus(i,j,k,q,qprime,qdprime,realqprime,realqdprime,eigenvect,&
+       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
     implicit none
 
     integer(kind=4),intent(in) :: i
     integer(kind=4),intent(in) :: j
     integer(kind=4),intent(in) :: k
-    integer(kind=4),intent(in) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4),intent(in) :: q(3)
-    integer(kind=4),intent(in) :: qprime(3)
-    integer(kind=4),intent(in) :: qdprime(3)
+    integer(kind=4),intent(in) :: q
+    integer(kind=4),intent(in) :: qprime
+    integer(kind=4),intent(in) :: qdprime
     real(kind=8),intent(in) :: realqprime(3)
     real(kind=8),intent(in) :: realqdprime(3)    
     complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
@@ -68,18 +67,16 @@ contains
     do ll=1,Ntri
        prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
             masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-            phexp(-dot_product(realqprime/ngrid,R_j(:,ll)))*&
+            phexp(dot_product(realqprime/ngrid,R_j(:,ll)))*&
             phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
-       Vp0=0.
+       Vp0=0.d0
        do rr=1,3
           do ss=1,3
              do tt=1,3
                 Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                     eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
-                     conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,&
-                     ss+3*(Index_j(ll)-1)))*&
-                     conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),&
-                     k,rr+3*(Index_k(ll)-1)))
+                     eigenvect(q,i,tt+3*(Index_i(ll)-1))*&
+                     eigenvect(qprime,j,ss+3*(Index_j(ll)-1))*&
+                     conjg(eigenvect(qdprime,k,rr+3*(Index_k(ll)-1)))
              end do
           end do
        end do
@@ -88,17 +85,16 @@ contains
   end function Vp_plus
 
   ! Compute one of the matrix elements involved in the calculation of Ind_minus.
-  function Vp_minus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
-       eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+  function Vp_minus(i,j,k,q,qprime,qdprime,realqprime,realqdprime,eigenvect,&
+       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
     implicit none
 
     integer(kind=4),intent(in) :: i
     integer(kind=4),intent(in) :: j
     integer(kind=4),intent(in) :: k
-    integer(kind=4),intent(in) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4),intent(in) :: q(3)
-    integer(kind=4),intent(in) :: qprime(3)
-    integer(kind=4),intent(in) :: qdprime(3)
+    integer(kind=4),intent(in) :: q
+    integer(kind=4),intent(in) :: qprime
+    integer(kind=4),intent(in) :: qdprime
     real(kind=8),intent(in) :: realqprime(3)
     real(kind=8),intent(in) :: realqdprime(3)    
     complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
@@ -131,10 +127,9 @@ contains
           do ss=1,3
              do tt=1,3
                 Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                     eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
-                     conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1)))*&
-                     
-                     conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
+                     eigenvect(q,i,tt+3*(Index_i(ll)-1))*&
+                     conjg(eigenvect(qprime,j,ss+3*(Index_j(ll)-1)))*&
+                     conjg(eigenvect(qdprime,k,rr+3*(Index_k(ll)-1)))
              end do
           end do
        end do
@@ -158,7 +153,7 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_plus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
+    integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
@@ -168,7 +163,7 @@ contains
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+             Index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
        end do
     end do
@@ -176,7 +171,7 @@ contains
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
+    omega=energy(list(ll),i)
     ! Loop over all processes, detecting those that are allowed and
     ! computing their amplitudes.
     if(omega.ne.0) then
@@ -184,25 +179,27 @@ contains
           do ii=1,nptk
              qprime=IJK(:,ii)
              realqprime=matmul(rlattvec,qprime)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN absorption process-----------
              do k=1,Nbands
                 qdprime=q+qprime
                 qdprime=modulo(qdprime,Ngrid)
                 realqdprime=matmul(rlattvec,qdprime)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
+                omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                        velocity(ii,j,:)-&
+                        velocity(ss,k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus_count=N_plus_count+1
-                      Indof2ndPhonon_plus(N_plus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
-                      Indof3rdPhonon_plus(N_plus_count)=(index_N(qdprime(1),qdprime(2),qdprime(3))-1)*Nbands+k
+                      Indof2ndPhonon_plus(N_plus_count)=(ii-1)*Nbands+j
+                      Indof3rdPhonon_plus(N_plus_count)=(ss-1)*Nbands+k
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      Vp=Vp_plus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
-                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+                      Vp=Vp_plus(i,j,k,list(ll),ii,ss,&
+                           realqprime,realqdprime,eigenvect,&
+                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_plus(N_plus_count)=hbarp*pi/4.d0*(fBEprime-fBEdprime)*&
                            exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
@@ -235,7 +232,7 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
+    integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) ::  omega,omegap,omegadp
@@ -245,7 +242,7 @@ contains
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+             Index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
        end do
     end do
@@ -253,31 +250,33 @@ contains
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
+    omega=energy(list(ll),i)
     if(omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
              realqprime=matmul(rlattvec,qprime)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN emission process-----------
              do k=1,Nbands
                 qdprime=q-qprime
                 qdprime=modulo(qdprime,Ngrid)
                 realqdprime=matmul(rlattvec,qdprime)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
+                omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                        velocity(ii,j,:)-&
+                        velocity(ss,k,:))
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       N_minus_count=N_minus_count+1
-                      Indof2ndPhonon_minus(N_minus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
-                      Indof3rdPhonon_minus(N_minus_count)=(index_N(qdprime(1),qdprime(2),qdprime(3))-1)*Nbands+k
+                      Indof2ndPhonon_minus(N_minus_count)=(ii-1)*Nbands+j
+                      Indof3rdPhonon_minus(N_minus_count)=(ss-1)*Nbands+k
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      Vp=Vp_minus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
-                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+                      Vp=Vp_minus(i,j,k,list(ll),ii,ss,&
+                           realqprime,realqdprime,eigenvect,&
+                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_minus(N_minus_count)=hbarp*pi/4.d0*(fBEprime+fBEdprime+1)*&
                            exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
@@ -441,14 +440,14 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
+    integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
     real(kind=8) :: omega,omegap,omegadp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+             Index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
        end do
     end do
@@ -457,21 +456,22 @@ contains
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
+    omega=energy(list(ll),i)
     if(omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             omegap=energy(ii,j)
              !--------BEGIN absorption process-----------
              do k=1,Nbands
                 qdprime=q+qprime
                 qdprime=modulo(qdprime,Ngrid)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
+                omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                        velocity(ii,j,:)-&
+                        velocity(ss,k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus=N_plus+1
                       P_plus=P_plus+&
@@ -497,14 +497,14 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
+    integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
     real(kind=8) :: omega,omegap,omegadp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
           do kk=0,Ngrid(3)-1  ! G3 direction
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+             Index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
        end do
     end do
@@ -513,21 +513,22 @@ contains
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
+    omega=energy(list(ll),i)
     if(omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             omegap=energy(ii,j)
              !--------BEGIN emission process-----------
              do k=1,Nbands
                 qdprime=q-qprime
                 qdprime=modulo(qdprime,Ngrid)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
+                omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                        velocity(ii,j,:)-&
+                        velocity(ss,k,:))
                    if(abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       N_minus=N_minus+1
                       P_minus=P_minus+&
@@ -606,7 +607,7 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
+    integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
@@ -617,35 +618,37 @@ contains
     do ii=0,Ngrid(1)-1
        do jj=0,Ngrid(2)-1
           do kk=0,Ngrid(3)-1
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+             Index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
        end do
     end do
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
+    omega=energy(list(ll),i)
     if(omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
              realqprime=matmul(rlattvec,qprime)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN absorption process-----------
              do k=1,Nbands
                 qdprime=q+qprime
                 qdprime=modulo(qdprime,Ngrid)
                 realqdprime=matmul(rlattvec,qdprime)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
+                omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                        velocity(ii,j,:)-&
+                        velocity(ss,k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      Vp=Vp_plus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
-                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+                      Vp=Vp_plus(i,j,k,list(ll),ii,ss,&
+                           realqprime,realqdprime,eigenvect,&
+                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_plus=Gamma_plus+hbarp*pi/4.d0*(fBEprime-fBEdprime)*&
                            exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
@@ -674,7 +677,7 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
+    integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) ::  omega,omegap,omegadp
@@ -685,7 +688,7 @@ contains
     do ii=0,Ngrid(1)-1
        do jj=0,Ngrid(2)-1
           do kk=0,Ngrid(3)-1
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+             Index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
        end do
     end do
@@ -693,28 +696,30 @@ contains
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
+    omega=energy(list(ll),i)
     if(omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
              realqprime=matmul(rlattvec,qprime)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN emission process-----------
              do k=1,Nbands
                 qdprime=q-qprime
                 qdprime=modulo(qdprime,Ngrid)
                 realqdprime=matmul(rlattvec,qdprime)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
+                omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
                    sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                        velocity(ii,j,:)-&
+                        velocity(ss,k,:))
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      Vp=Vp_minus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
-                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+                      Vp=Vp_minus(i,j,k,list(ll),ii,ss,&
+                           realqprime,realqdprime,eigenvect,&
+                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_minus=Gamma_minus+hbarp*pi/4.d0*(fBEprime+fBEdprime+1)*&
                            exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
