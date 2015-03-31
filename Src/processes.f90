@@ -31,113 +31,6 @@ module processes
 
 contains
 
-  ! Number of absorption and emission processes.
-  subroutine Nprocesses(mm,N_plus,N_minus,energy,velocity,Nlist,List,IJK)
-    implicit none
-
-    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk)
-    integer(kind=4),intent(out) :: N_plus,N_minus
-    real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
-
-    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
-    integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
-    real(kind=8) :: sigma
-    real(kind=8) :: omega,omegap,omegadp
-
-    do ii=0,Ngrid(1)-1        ! G1 direction
-       do jj=0,Ngrid(2)-1     ! G2 direction
-          do kk=0,Ngrid(3)-1  ! G3 direction
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
-          end do
-       end do
-    end do
-    N_plus=0
-    N_minus=0
-    i=modulo(mm-1,Nbands)+1
-    ll=int((mm-1)/Nbands)+1
-    q=IJK(:,List(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
-    ! omega, omegap and omegadp are the frequencies of the three
-    ! phonons involved in each process. A locally adaptive broadening
-    ! (sigma) is computed for each process and used to determine
-    ! whether it is allowed by conservation of energy. The regularized
-    ! version of the Dirac delta chosen for this is a gaussian.
-    if (omega.ne.0) then
-       do j=1,Nbands
-          do ii=1,nptk
-             qprime=IJK(:,ii)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
-             !--------BEGIN absorption process-----------
-             do k=1,Nbands
-                qdprime=q+qprime
-                qdprime=modulo(qdprime,Ngrid)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
-                if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
-                   if (abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
-                      N_plus=N_plus+1
-                   endif
-                end if
-             end do ! k
-             !--------END absorption process-------------
-             !--------BEGIN emission process-----------
-             do k=1,Nbands
-                qdprime=q-qprime
-                qdprime=modulo(qdprime,Ngrid)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
-                if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
-                   if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
-                      N_minus=N_minus+1
-                   endif
-                end if
-             end do ! k
-             !--------END emission process-------------
-          end do ! ii
-       end do  ! j
-    end if
-  end subroutine Nprocesses
-
-  ! Wrapper around Nprocesses that splits the work among processors.
-  subroutine Nprocesses_driver(energy,velocity,Nlist,List,IJK,&
-       N_plus,N_minus)
-    implicit none
-
-    include "mpif.h"
-
-    real(kind=8),intent(in) :: energy(nptk,nbands)
-    real(kind=8),intent(in) :: velocity(nptk,nbands,3)
-    integer(kind=4),intent(in) :: Nlist
-    integer(kind=4),intent(in) :: List(Nlist)
-    integer(kind=4),intent(in) :: IJK(3,nptk)
-    integer(kind=4),intent(out) :: N_plus(Nlist*Nbands)
-    integer(kind=4),intent(out) :: N_minus(Nlist*Nbands)
-
-    integer(kind=4) :: mm
-    integer(kind=4) :: N_plus_reduce(Nlist*Nbands)
-    integer(kind=4) :: N_minus_reduce(Nlist*Nbands)
-
-    N_plus=0
-    N_minus=0
-    N_plus_reduce=0
-    N_minus_reduce=0
-
-    do mm=myid+1,Nbands*Nlist,numprocs
-       call Nprocesses(mm,N_plus_reduce(mm),N_minus_reduce(mm),&
-            energy,velocity,Nlist,List(1:Nlist),IJK)
-    end do
-
-    call MPI_ALLREDUCE(N_plus_reduce,N_plus,Nbands*Nlist,&
-         MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,mm)
-    call MPI_ALLREDUCE(N_minus_reduce,N_minus,Nbands*Nlist,&
-         MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,mm)
-  end subroutine Nprocesses_driver
-
   ! Scattering amplitudes of absorption processes.
   subroutine Ind_plus(mm,N_plus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
@@ -470,20 +363,17 @@ contains
     deallocate(Gamma_minus_reduce)
   end subroutine Ind_driver
 
-  ! Mode contribution to the phase-space volume. The algorithm is very
-  ! similar to the rest of subroutines in this module. No matrix
-  ! element is calculated in this case (compare with Ind_*) when an
-  ! allowed process is detected. Instead, the amplitude of each
-  ! gaussian is added to the final result. This subroutine computes the
-  ! absorption part.
-  subroutine D_plus(mm,N_plus,energy,velocity,Nlist,List,IJK,P3_plus)
+  ! Compute the number of allowed absorption processes and their contribution
+  ! to phase space.
+  subroutine NP_plus(mm,energy,velocity,Nlist,List,IJK,N_plus,P_plus)
     implicit none
 
-    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk),N_plus
+    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk)
     real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
-    real(kind=8),intent(out) :: P3_plus(N_plus)
+    integer(kind=4),intent(out) :: N_plus
+    real(kind=8),intent(out) :: P_plus
 
-    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_plus_count
+    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
     integer(kind=4) :: ii,jj,kk,ll
     real(kind=8) :: sigma
@@ -496,7 +386,8 @@ contains
           end do
        end do
     end do
-    N_plus_count=0
+    N_plus=0
+    P_plus=0.d00
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
@@ -516,8 +407,9 @@ contains
                         velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
                         velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
-                      N_plus_count=N_plus_count+1
-                      P3_plus(N_plus_count)=exp(-(omega+omegap-omegadp)**2/(sigma**2))/&
+                      N_plus=N_plus+1
+                      P_plus=P_plus+&
+                           exp(-(omega+omegap-omegadp)**2/(sigma**2))/&
                            (sigma*sqrt(Pi)*nptk**2*nbands**3)
                    end if
                 end if
@@ -526,18 +418,18 @@ contains
           end do ! ii
        end do  ! j
     end if
-    if(N_plus_count.ne.N_plus) write(error_unit,*) "Error: in D_plus, N_plus_count!=N_plus"
-  end subroutine D_plus
+  end subroutine NP_plus
 
-  ! Same as D_plus, but for emission processes.
-  subroutine D_minus(mm,N_minus,energy,velocity,Nlist,List,IJK,P3_minus)
+  ! Same as NP_plus, but for emission processes.
+  subroutine NP_minus(mm,energy,velocity,Nlist,List,IJK,N_minus,P_minus)
     implicit none
 
-    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk),N_minus
+    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk)
     real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
-    real(kind=8),intent(out) :: P3_minus(N_minus)
+    integer(kind=4),intent(out) :: N_minus
+    real(kind=8),intent(out) :: P_minus
 
-    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
+    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
     integer(kind=4) :: ii,jj,kk,ll
     real(kind=8) :: sigma
@@ -550,7 +442,8 @@ contains
           end do
        end do
     end do
-    N_minus_count=0
+    N_minus=0
+    P_minus=0.d00
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
@@ -570,8 +463,9 @@ contains
                         velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
                         velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if(abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
-                      N_minus_count=N_minus_count+1
-                      P3_minus(N_minus_count)=exp(-(omega-omegap-omegadp)**2/(sigma**2))/&
+                      N_minus=N_minus+1
+                      P_minus=P_minus+&
+                           exp(-(omega-omegap-omegadp)**2/(sigma**2))/&
                            (sigma*sqrt(Pi)*nptk**2*nbands**3)
                    end if
                 end if
@@ -580,13 +474,85 @@ contains
           end do ! ii
        end do  ! j
     end if
-    if(N_minus_count.ne.N_minus) write(error_unit,*) "Error: in D_minus, N_minus_count!=N_minus"
-  end subroutine D_minus
+  end subroutine NP_minus
+ 
 
-  ! Wrapper around D_plus and D_minus that splits the work among processors.
-  subroutine P3_driver(energy,velocity,Nlist,List,IJK,N_plus,N_minus,&
-       Pspace_plus_total,Pspace_plus_partial,&
-       Pspace_minus_total,Pspace_minus_partial)
+  ! Number of absorption and emission processes.
+  subroutine Nprocesses(mm,N_plus,N_minus,energy,velocity,Nlist,List,IJK)
+    implicit none
+
+    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk)
+    integer(kind=4),intent(out) :: N_plus,N_minus
+    real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
+
+    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
+    integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
+    integer(kind=4) :: ii,jj,kk,ll
+    real(kind=8) :: sigma
+    real(kind=8) :: omega,omegap,omegadp
+
+    do ii=0,Ngrid(1)-1        ! G1 direction
+       do jj=0,Ngrid(2)-1     ! G2 direction
+          do kk=0,Ngrid(3)-1  ! G3 direction
+             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
+          end do
+       end do
+    end do
+    N_plus=0
+    N_minus=0
+    i=modulo(mm-1,Nbands)+1
+    ll=int((mm-1)/Nbands)+1
+    q=IJK(:,List(ll))
+    omega=energy(index_N(q(1),q(2),q(3)),i)
+    ! omega, omegap and omegadp are the frequencies of the three
+    ! phonons involved in each process. A locally adaptive broadening
+    ! (sigma) is computed for each process and used to determine
+    ! whether it is allowed by conservation of energy. The regularized
+    ! version of the Dirac delta chosen for this is a gaussian.
+    if (omega.ne.0) then
+       do j=1,Nbands
+          do ii=1,nptk
+             qprime=IJK(:,ii)
+             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
+             !--------BEGIN absorption process-----------
+             do k=1,Nbands
+                qdprime=q+qprime
+                qdprime=modulo(qdprime,Ngrid)
+                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                if ((omegap.ne.0).and.(omegadp.ne.0)) then
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                   if (abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
+                      N_plus=N_plus+1
+                   endif
+                end if
+             end do ! k
+             !--------END absorption process-------------
+             !--------BEGIN emission process-----------
+             do k=1,Nbands
+                qdprime=q-qprime
+                qdprime=modulo(qdprime,Ngrid)
+                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
+                if ((omegap.ne.0).and.(omegadp.ne.0)) then
+                   sigma=scalebroad*base_sigma(&
+                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
+                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
+                   if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
+                      N_minus=N_minus+1
+                   endif
+                end if
+             end do ! k
+             !--------END emission process-------------
+          end do ! ii
+       end do  ! j
+    end if
+  end subroutine Nprocesses
+
+
+  ! Wrapper around NP_plus and NP_minus that splits the work among processors.
+  subroutine NP_driver(energy,velocity,Nlist,List,IJK,&
+       N_plus,Pspace_plus_total,N_minus,Pspace_minus_total)
     implicit none
 
     include "mpif.h"
@@ -596,52 +562,40 @@ contains
     integer(kind=4),intent(in) :: NList
     integer(kind=4),intent(in) :: List(Nlist)
     integer(kind=4),intent(in) :: IJK(3,nptk)
-    integer(kind=4),intent(in) :: N_plus(Nlist*Nbands)
-    integer(kind=4),intent(in) :: N_minus(Nlist*Nbands)
+    integer(kind=4),intent(out) :: N_plus(Nlist*Nbands)
+    integer(kind=4),intent(out) :: N_minus(Nlist*Nbands)
     real(kind=8),intent(out) :: Pspace_plus_total(Nbands,Nlist)
-    real(kind=8),intent(out) :: Pspace_plus_partial(Nbands,Nlist)
     real(kind=8),intent(out) :: Pspace_minus_total(Nbands,Nlist)
-    real(kind=8),intent(out) :: Pspace_minus_partial(Nbands,Nlist)
 
-    integer(kind=4) :: ii
-    integer(kind=4) :: jj
     integer(kind=4) :: mm
-    real(kind=8),allocatable :: Pspace_plus_tmp(:)
-    real(kind=8),allocatable :: Pspace_minus_tmp(:)
+    integer(kind=4) :: N_plus_reduce(Nlist*Nbands)
+    integer(kind=4) :: N_minus_reduce(Nlist*Nbands)
+    real(kind=8) :: Pspace_plus_reduce(Nlist*Nbands)
+    real(kind=8) :: Pspace_minus_reduce(Nlist*Nbands)
 
     Pspace_plus_total=0.d0
-    Pspace_plus_partial=0.d0
+    Pspace_plus_reduce=0.d0
     Pspace_minus_total=0.d0
-    Pspace_minus_partial=0.d0
-
-    allocate(Pspace_plus_tmp(maxval(N_plus)))
-    allocate(Pspace_minus_tmp(maxval(N_minus)))
+    Pspace_minus_reduce=0.d0
+    N_plus=0
+    N_minus=0
+    N_plus_reduce=0
+    N_minus_reduce=0
 
     do mm=myid+1,Nbands*Nlist,numprocs
-       Pspace_plus_tmp=0.d0
-       if(N_plus(mm).ne.0) then
-          ii=modulo(mm-1,Nbands)+1
-          jj=int((mm-1)/Nbands)+1
-          call D_plus(mm,N_plus(mm),energy,velocity,Nlist,List,IJK,&
-               Pspace_plus_tmp)
-          Pspace_plus_partial(ii,jj)=Pspace_plus_partial(ii,jj)+sum(Pspace_plus_tmp)
-       end if
-       Pspace_minus_tmp=0.d0
-       if(N_minus(mm).ne.0) then
-          ii=modulo(mm-1,Nbands)+1
-          jj=int((mm-1)/Nbands)+1
-          call D_minus(mm,N_minus(mm),energy,velocity,Nlist,List,IJK,&
-               Pspace_minus_tmp)
-          Pspace_minus_partial(ii,jj)=Pspace_minus_partial(ii,jj)+sum(Pspace_minus_tmp)
-       end if
+       call NP_plus(mm,energy,velocity,Nlist,List,IJK,&
+            N_plus_reduce(mm),Pspace_plus_reduce(mm))
+       call NP_minus(mm,energy,velocity,Nlist,List,IJK,&
+            N_minus_reduce(mm),Pspace_minus_reduce(mm))
     end do
 
-    call MPI_ALLREDUCE(Pspace_plus_partial,Pspace_plus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
-         MPI_SUM,MPI_COMM_WORLD,ii)
-    call MPI_ALLREDUCE(Pspace_minus_partial,Pspace_minus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
-         MPI_SUM,MPI_COMM_WORLD,ii)
-
-    deallocate(Pspace_minus_tmp)
-    deallocate(Pspace_plus_tmp)
-  end subroutine P3_driver
+    call MPI_ALLREDUCE(N_plus_reduce,N_plus,Nbands*Nlist,MPI_INTEGER,&
+         MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(N_minus_reduce,N_minus,Nbands*Nlist,MPI_INTEGER,&
+         MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(Pspace_plus_reduce,Pspace_plus_total,Nbands*Nlist,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(Pspace_minus_reduce,Pspace_minus_total,Nbands*Nlist,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+  end subroutine NP_driver
 end module processes

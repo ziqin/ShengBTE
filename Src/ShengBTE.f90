@@ -63,8 +63,8 @@ program ShengBTE
   integer(kind=4),allocatable :: Indof2ndPhonon_minus(:),Indof3rdPhonon_minus(:)
   real(kind=8) :: radnw,kappa_or_old
   real(kind=8),allocatable :: Gamma_plus(:),Gamma_minus(:)
-  real(kind=8),allocatable :: Pspace_plus_partial(:,:),Pspace_plus_total(:,:)
-  real(kind=8),allocatable :: Pspace_minus_partial(:,:),Pspace_minus_total(:,:)
+  real(kind=8),allocatable :: Pspace_plus_total(:,:)
+  real(kind=8),allocatable :: Pspace_minus_total(:,:)
   real(kind=8),allocatable :: ffunc(:,:),radnw_range(:),v_or(:,:),F_or(:,:)
   real(kind=8),allocatable :: kappa_or(:),kappa_wires(:,:),kappa_wires_reduce(:,:)
 
@@ -242,26 +242,22 @@ program ShengBTE
      radnw_range(ii)=rmin+(ii-1.0)*dr
   end do
 
-  ! Compute and print the number of allowed absorption and emission processes.
-  ! N_plus for absorption processes and N_minus for emission processes.
+  ! N_plus: number of allowed absorption processes
+  ! N_minus: number of allowed emission processes.
   allocate(N_plus(Nlist*Nbands))
   allocate(N_minus(Nlist*Nbands))
-  call Nprocesses_driver(energy,velocity,Nlist,List,IJK,&
-       N_plus,N_minus)
+  ! Phase space volume per mode and their sum.  
+  allocate(Pspace_plus_total(Nbands,Nlist))
+  allocate(Pspace_minus_total(Nbands,Nlist))
+
+  call NP_driver(energy,velocity,Nlist,List,IJK,&
+       N_plus,Pspace_plus_total,N_minus,Pspace_minus_total)
+
   Ntotal_plus=sum(N_plus)
   Ntotal_minus=sum(N_minus)
+
   if(myid.eq.0)write(*,*) "Info: Ntotal_plus =",Ntotal_plus
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
-
-  ! Obtain the phase space volume per mode and their sum.
-  allocate(Pspace_plus_total(Nbands,Nlist))
-  allocate(Pspace_plus_partial(Nbands,Nlist))
-  allocate(Pspace_minus_total(Nbands,Nlist))
-  allocate(Pspace_minus_partial(Nbands,Nlist))
-
-  call P3_driver(energy,velocity,Nlist,List,IJK,N_plus,N_minus,&
-       Pspace_plus_total,Pspace_plus_partial,&
-       Pspace_minus_total,Pspace_minus_partial)
 
   if(myid.eq.0) then
      open(1,file="BTE.P3_plus",status="replace")
@@ -298,9 +294,7 @@ program ShengBTE
   end if
 
   deallocate(Pspace_plus_total)
-  deallocate(Pspace_plus_partial)
   deallocate(Pspace_minus_total)
-  deallocate(Pspace_minus_partial)
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
