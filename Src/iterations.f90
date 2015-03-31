@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -36,16 +36,8 @@ contains
     real(kind=8),intent(in) :: omega(nptk,Nbands),velocity(nptk,Nbands,3),tau_zero(Nbands,Nlist)
     real(kind=8),intent(out) :: F_n(Nbands,nptk,3)
 
-    integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
+    integer(kind=4) :: ii,kk,ll
 
-    do ii=0,Ngrid(1)-1
-       do jj=0,Ngrid(2)-1
-          do kk=0,Ngrid(3)-1
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
-          end do
-       end do
-    end do
     do ll=1,Nlist
        do ii=1,Nbands
           do kk=1,Nequi(ll)
@@ -72,20 +64,11 @@ contains
     real(kind=8),intent(in) :: Gamma_plus(Ntotal_plus),Gamma_minus(Ntotal_minus),tau_zero(nbands,nlist)
     real(kind=8),intent(inout) :: F_n(Nbands,nptk,3)
 
-    integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
     integer(kind=4) :: ID_equi(Nsymm,nptk),Naccum_plus,Naccum_minus
-    integer(kind=4) :: i,j,k,ii,jj,kk,ll,mm,nn
+    integer(kind=4) :: i,j,k,jj,kk,ll,mm,nn
     real(kind=8) :: DeltaF(Nbands,nptk,3)
 
-    DeltaF=0.d0
     call symmetry_map(ID_equi)
-    do ii=0,Ngrid(1)-1
-       do jj=0,Ngrid(2)-1
-          do kk=0,Ngrid(3)-1
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
-          end do
-       end do
-    end do
     DeltaF=0.d0
     do ll=1,Nlist
        do i=1,Nbands
@@ -142,20 +125,12 @@ contains
     real(kind=8),intent(in) :: Gamma_plus(Ntotal_plus),Gamma_minus(Ntotal_minus),tau_zero(nbands,nlist)
     real(kind=8),intent(inout) :: F_n(Nbands,nptk)
 
-    integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
     integer(kind=4) :: ID_equi(Nsymm,nptk),Naccum_plus,Naccum_minus
-    integer(kind=4) :: i,j,k,ii,jj,kk,ll,mm,nn
+    integer(kind=4) :: i,j,k,jj,kk,ll,mm,nn
     real(kind=8) :: DeltaF(Nbands,nptk)
 
     DeltaF=0.d0
     call symmetry_map(ID_equi)
-    do ii=0,Ngrid(1)-1
-       do jj=0,Ngrid(2)-1
-          do kk=0,Ngrid(3)-1
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
-          end do
-       end do
-    end do
     DeltaF=0.d0
     do ll=1,Nlist
        do i=1,Nbands
