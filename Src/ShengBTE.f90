@@ -558,14 +558,16 @@ program ShengBTE
         end do
         call MPI_ALLREDUCE(kappa_wires_reduce,kappa_wires,Nbands*Nwires,&
              MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-        write(aux,"(I0)") 3*nbands
-        open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
-        do ii=1,Nwires
-           radnw=radnw_range(ii)
-           write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
-                kappa_wires(:,ii),sum(kappa_wires(:,ii))
-        end do
-        close(3001)
+        if(myid.eq.0) then
+           write(aux,"(I0)") 3*nbands
+           open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
+           do ii=1,Nwires
+              radnw=radnw_range(ii)
+              write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
+                   kappa_wires(:,ii),sum(kappa_wires(:,ii))
+           end do
+           close(3001)
+        end if
      end do
   end if
 
