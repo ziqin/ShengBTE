@@ -41,7 +41,7 @@ program ShengBTE
 
   real(kind=8),allocatable :: grun(:,:)
 
-  real(kind=8),allocatable :: rate_scatt(:,:),rate_scatt_reduce(:,:)
+  real(kind=8),allocatable :: rate_scatt(:,:)
   real(kind=8),allocatable :: tau_zero(:,:),tau(:,:),tau_b(:,:),tau2(:,:),tau_b2(:,:)
   real(kind=8),allocatable :: dos(:,:),pdos(:,:,:),rate_scatt_isotope(:,:)
   real(kind=8),allocatable :: F_n(:,:,:),F_n_0(:,:,:),F_n_aux(:,:)
@@ -58,17 +58,13 @@ program ShengBTE
 
   integer(kind=4) :: nlist,Ntotal_plus,Ntotal_minus
   integer(kind=4),allocatable :: nequi(:),list(:),AllEquiList(:,:),TypeofSymmetry(:,:),eqclasses(:)
-  integer(kind=4),allocatable :: N_plus(:),N_minus(:),N_plus_reduce(:),N_minus_reduce(:)
-  integer(kind=4),allocatable :: Naccum_plus(:),Naccum_minus(:)
+  integer(kind=4),allocatable :: N_plus(:),N_minus(:)
   integer(kind=4),allocatable :: Indof2ndPhonon_plus(:),Indof3rdPhonon_plus(:)
   integer(kind=4),allocatable :: Indof2ndPhonon_minus(:),Indof3rdPhonon_minus(:)
-  integer(kind=4),allocatable :: Indof2ndPhonon_plus_reduce(:),Indof3rdPhonon_plus_reduce(:)
-  integer(kind=4),allocatable :: Indof2ndPhonon_minus_reduce(:),Indof3rdPhonon_minus_reduce(:)
   real(kind=8) :: radnw,kappa_or_old
   real(kind=8),allocatable :: Gamma_plus(:),Gamma_minus(:)
-  real(kind=8),allocatable :: Pspace_plus_partial(:,:),Pspace_plus_total(:,:),Pspace_plus_tmp(:)
-  real(kind=8),allocatable :: Pspace_minus_partial(:,:),Pspace_minus_total(:,:),Pspace_minus_tmp(:)
-  real(kind=8),allocatable :: Gamma_plus_reduce(:),Gamma_minus_reduce(:)
+  real(kind=8),allocatable :: Pspace_plus_partial(:,:),Pspace_plus_total(:,:)
+  real(kind=8),allocatable :: Pspace_minus_partial(:,:),Pspace_minus_total(:,:)
   real(kind=8),allocatable :: ffunc(:,:),radnw_range(:),v_or(:,:),F_or(:,:)
   real(kind=8),allocatable :: kappa_or(:),kappa_wires(:,:),kappa_wires_reduce(:,:)
 
@@ -86,15 +82,29 @@ program ShengBTE
   ! on and so forth.
   call read_config()
 
-  allocate(energy(nptk,nbands),eigenvect(nptk,nbands,nbands),grun(nptk,nbands))
-  allocate(q0(nptk,3),velocity(nptk,nbands,3),velocity_z(nptk,nbands))
-  allocate(IJK(3,nptk),Index_N(0:(ngrid(1)-1),0:(ngrid(2)-1),0:(ngrid(3)-1)))
-  allocate(F_n(nbands,nptk,3),F_n_0(nbands,nptk,3),F_n_aux(nbands,nptk))
-  allocate(ThConductivity(nbands,3,3),ThConductivityMode(nptk,nbands,3,3),kappa_wires(nbands,nwires),&
-       kappa_wires_reduce(nbands,nwires))
-  allocate(Nequi(nptk),list(nptk),AllEquiList(nsymm,nptk),TypeOfSymmetry(nsymm,nptk),&
-       eqclasses(nptk))
-  allocate(ffunc(nptk,nbands),v_or(nptk,nbands),F_or(nbands,nptk),kappa_or(nbands))
+  allocate(energy(nptk,nbands))
+  allocate(eigenvect(nptk,nbands,nbands))
+  allocate(grun(nptk,nbands))
+  allocate(q0(nptk,3))
+  allocate(velocity(nptk,nbands,3))
+  allocate(velocity_z(nptk,nbands))
+  allocate(IJK(3,nptk))
+  allocate(Index_N(0:(ngrid(1)-1),0:(ngrid(2)-1),0:(ngrid(3)-1)))
+  allocate(F_n(nbands,nptk,3))
+  allocate(F_n_0(nbands,nptk,3),F_n_aux(nbands,nptk))
+  allocate(ThConductivity(nbands,3,3))
+  allocate(ThConductivityMode(nptk,nbands,3,3))
+  allocate(kappa_wires(nbands,nwires))
+  allocate(kappa_wires_reduce(nbands,nwires))
+  allocate(Nequi(nptk))
+  allocate(List(nptk))
+  allocate(AllEquiList(nsymm,nptk))
+  allocate(TypeOfSymmetry(nsymm,nptk))
+  allocate(eqclasses(nptk))
+  allocate(ffunc(nptk,nbands))
+  allocate(v_or(nptk,nbands))
+  allocate(F_or(nbands,nptk))
+  allocate(kappa_or(nbands))
 
   ! Obtain the q-point equivalence classes defined by symmetry
   ! operations.
@@ -220,18 +230,12 @@ program ShengBTE
      close(1)
   end if
   
-  ! N_plus for absorption processes and N_minus for emission processes.
-  allocate(N_plus(Nlist*Nbands),N_minus(Nlist*Nbands))
-  N_plus=0
-  N_minus=0
-  allocate(N_plus_reduce(Nlist*Nbands),N_minus_reduce(Nlist*Nbands))
-  N_plus_reduce=0
-  N_minus_reduce=0
-  allocate(Naccum_plus(Nlist*Nbands),Naccum_minus(Nlist*Nbands))
-  allocate(rate_scatt_reduce(Nbands,Nlist))
-  rate_scatt_reduce=0.d0
-  allocate(rate_scatt(Nbands,Nlist),tau_zero(Nbands,Nlist),tau(Nbands,Nlist),&
-       tau_b(Nbands,Nlist),tau2(Nbands,nptk),tau_b2(Nbands,nptk))
+  allocate(rate_scatt(Nbands,Nlist))
+  allocate(tau_zero(Nbands,Nlist))
+  allocate(tau(Nbands,Nlist))
+  allocate(tau_b(Nbands,Nlist))
+  allocate(tau2(Nbands,nptk))
+  allocate(tau_b2(Nbands,nptk))
   rate_scatt=0.d0
   allocate(radnw_range(nwires))
   do ii=1,nwires
@@ -239,57 +243,25 @@ program ShengBTE
   end do
 
   ! Compute and print the number of allowed absorption and emission processes.
-  do mm=myid+1,Nbands*Nlist,numprocs
-     call Nprocesses(mm,ii,jj,energy,velocity,Nlist,List(1:Nlist),IJK)
-     N_plus_reduce(mm)=ii
-     N_minus_reduce(mm)=jj
-  end do
-
-  call MPI_ALLREDUCE(N_plus_reduce,N_plus,Nbands*Nlist,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(N_minus_reduce,N_minus,Nbands*Nlist,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  deallocate(N_plus_reduce,N_minus_reduce)
-
-  Ntotal_plus=0
-  Ntotal_minus=0
-  do mm=1,Nbands*Nlist
-     Ntotal_plus=Ntotal_plus+N_plus(mm)
-     Ntotal_minus=Ntotal_minus+N_minus(mm)
-  end do
+  ! N_plus for absorption processes and N_minus for emission processes.
+  allocate(N_plus(Nlist*Nbands))
+  allocate(N_minus(Nlist*Nbands))
+  call Nprocesses_driver(energy,velocity,Nlist,List,IJK,&
+       N_plus,N_minus)
+  Ntotal_plus=sum(N_plus)
+  Ntotal_minus=sum(N_minus)
   if(myid.eq.0)write(*,*) "Info: Ntotal_plus =",Ntotal_plus
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
 
   ! Obtain the phase space volume per mode and their sum.
-  allocate(Pspace_plus_total(Nbands,Nlist),Pspace_plus_partial(Nbands,Nlist),&
-       Pspace_plus_tmp(maxval(N_plus)))
-  allocate(Pspace_minus_total(Nbands,Nlist),Pspace_minus_partial(Nbands,Nlist),&
-       Pspace_minus_tmp(maxval(N_minus)))
-  Pspace_plus_total=0.
-  Pspace_plus_partial=0.
-  Pspace_minus_total=0.
-  Pspace_minus_partial=0.
-  do mm=myid+1,Nbands*Nlist,numprocs
-     Pspace_plus_tmp=0.
-     if(N_plus(mm).ne.0) then
-        ii=modulo(mm-1,Nbands)+1
-        jj=int((mm-1)/Nbands)+1
-        call D_plus(mm,N_plus(mm),energy,velocity,Nlist,List,IJK,&
-             Pspace_plus_tmp)
-        Pspace_plus_partial(ii,jj)=Pspace_plus_partial(ii,jj)+sum(Pspace_plus_tmp)
-     end if
-     Pspace_minus_tmp=0.
-     if(N_minus(mm).ne.0) then
-        ii=modulo(mm-1,Nbands)+1
-        jj=int((mm-1)/Nbands)+1
-        call D_minus(mm,N_minus(mm),energy,velocity,Nlist,List,IJK,&
-             Pspace_minus_tmp)
-        Pspace_minus_partial(ii,jj)=Pspace_minus_partial(ii,jj)+sum(Pspace_minus_tmp)
-     end if
-  end do
+  allocate(Pspace_plus_total(Nbands,Nlist))
+  allocate(Pspace_plus_partial(Nbands,Nlist))
+  allocate(Pspace_minus_total(Nbands,Nlist))
+  allocate(Pspace_minus_partial(Nbands,Nlist))
 
-  call MPI_ALLREDUCE(Pspace_plus_partial,Pspace_plus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
-       MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(Pspace_minus_partial,Pspace_minus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
-       MPI_SUM,MPI_COMM_WORLD,ierr)
+  call P3_driver(energy,velocity,Nlist,List,IJK,N_plus,N_minus,&
+       Pspace_plus_total,Pspace_plus_partial,&
+       Pspace_minus_total,Pspace_minus_partial)
 
   if(myid.eq.0) then
      open(1,file="BTE.P3_plus",status="replace")
@@ -325,8 +297,10 @@ program ShengBTE
      close(1)
   end if
 
-  deallocate(Pspace_plus_total,Pspace_plus_partial,Pspace_plus_tmp)
-  deallocate(Pspace_minus_total,Pspace_minus_partial,Pspace_minus_tmp)
+  deallocate(Pspace_plus_total)
+  deallocate(Pspace_plus_partial)
+  deallocate(Pspace_minus_total)
+  deallocate(Pspace_minus_partial)
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
@@ -355,57 +329,19 @@ program ShengBTE
   end if
   deallocate(grun)
 
-  Naccum_plus(1)=0
-  Naccum_minus(1)=0
-  do mm=2,Nbands*Nlist
-     Naccum_plus(mm)=Naccum_plus(mm-1)+N_plus(mm-1)
-     Naccum_minus(mm)=Naccum_minus(mm-1)+N_minus(mm-1)
-  end do
+  ! This is the most expensive part of the calculation: obtaining the
+  ! three-phonon scattering amplitudes for all allowed processes.
+  allocate(Indof2ndPhonon_plus(Ntotal_plus))
+  allocate(Indof3rdPhonon_plus(Ntotal_plus))
+  allocate(Indof2ndPhonon_minus(Ntotal_minus))
+  allocate(Indof3rdPhonon_minus(Ntotal_minus))
+  allocate(Gamma_plus(Ntotal_plus))
+  allocate(Gamma_minus(Ntotal_minus))
 
-  ! Here begins the most expensive part of the calculation: obtaining the
-  ! three-phonon scattering amplitudes for all processes.
-  allocate(Indof2ndPhonon_plus_reduce(Ntotal_plus),Indof3rdPhonon_plus_reduce(Ntotal_plus),&
-       Indof2ndPhonon_minus_reduce(Ntotal_minus),Indof3rdPhonon_minus_reduce(Ntotal_minus),&
-       Gamma_plus_reduce(Ntotal_plus),Gamma_minus_reduce(Ntotal_minus))
-  Indof2ndPhonon_plus_reduce=0
-  Indof3rdPhonon_plus_reduce=0
-  Indof2ndPhonon_minus_reduce=0
-  Indof3rdPhonon_minus_reduce=0
-  Gamma_plus_reduce=0.d0
-  Gamma_minus_reduce=0.d0
-  do mm=myid+1,Nbands*NList,numprocs
-     i=modulo(mm-1,Nbands)+1
-     ll=int((mm-1)/Nbands)+1
-     if((N_plus(mm).ne.0)) then
-        allocate(Indof2ndPhonon_plus(N_plus(mm)),Indof3rdPhonon_plus(N_plus(mm)))
-        allocate(Gamma_plus(N_plus(mm)))
-        call Ind_plus(mm,N_plus(mm),energy,velocity,eigenvect,Nlist,List,&
-             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-             Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus)
-        Indof2ndPhonon_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=Indof2ndPhonon_plus
-        Indof3rdPhonon_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=Indof3rdPhonon_plus
-        Gamma_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=Gamma_plus
-        rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma_plus)
-        deallocate(Indof2ndPhonon_plus,Indof3rdPhonon_plus)
-        deallocate(Gamma_plus)
-     end if
-     if((N_minus(mm).ne.0)) then
-        allocate(Indof2ndPhonon_minus(N_minus(mm)),Indof3rdPhonon_minus(N_minus(mm)))
-        allocate(Gamma_minus(N_minus(mm)))
-        call Ind_minus(mm,N_minus(mm),energy,velocity,eigenvect,Nlist,List,&
-             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus)
-        Indof2ndPhonon_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=Indof2ndPhonon_minus
-        Indof3rdPhonon_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=Indof3rdPhonon_minus
-        Gamma_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=Gamma_minus
-        rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma_minus)*5.D-1
-        deallocate(Indof2ndPhonon_minus,Indof3rdPhonon_minus)
-        deallocate(Gamma_minus)
-     end if
-  end do
-
-  call MPI_ALLREDUCE(rate_scatt_reduce,rate_scatt,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
-       MPI_SUM,MPI_COMM_WORLD,ierr)
+  call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
+       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
+       Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
+       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
 
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
@@ -425,27 +361,6 @@ program ShengBTE
      end do
      close(1)
   end if
-
-  deallocate(rate_scatt_reduce)
-  allocate(Indof2ndPhonon_plus(Ntotal_plus),Indof3rdPhonon_plus(Ntotal_plus),&
-       Indof2ndPhonon_minus(Ntotal_minus),Indof3rdPhonon_minus(Ntotal_minus))
-  allocate(Gamma_plus(Ntotal_plus),Gamma_minus(Ntotal_minus))
-
-  call MPI_ALLREDUCE(Indof2ndPhonon_plus_reduce,Indof2ndPhonon_plus,Ntotal_plus,&
-       MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(Indof3rdPhonon_plus_reduce,Indof3rdPhonon_plus,Ntotal_plus,&
-       MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(Indof2ndPhonon_minus_reduce,Indof2ndPhonon_minus,Ntotal_minus,&
-       MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(Indof3rdPhonon_minus_reduce,Indof3rdPhonon_minus,Ntotal_minus,&
-       MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(Gamma_plus_reduce,Gamma_plus,Ntotal_plus,&
-       MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(Gamma_minus_reduce,Gamma_minus,Ntotal_minus,&
-       MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  deallocate(Indof2ndPhonon_plus_reduce,Indof3rdPhonon_plus_reduce,&
-       Indof2ndPhonon_minus_reduce,Indof3rdPhonon_minus_reduce,&
-       Gamma_plus_reduce,Gamma_minus_reduce)
 
   tau_zero=0.d0
   do ll = 1,Nlist

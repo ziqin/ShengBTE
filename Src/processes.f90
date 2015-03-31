@@ -103,6 +103,41 @@ contains
     end if
   end subroutine Nprocesses
 
+  ! Wrapper around Nprocesses that splits the work among processors.
+  subroutine Nprocesses_driver(energy,velocity,Nlist,List,IJK,&
+       N_plus,N_minus)
+    implicit none
+
+    include "mpif.h"
+
+    real(kind=8),intent(in) :: energy(nptk,nbands)
+    real(kind=8),intent(in) :: velocity(nptk,nbands,3)
+    integer(kind=4),intent(in) :: Nlist
+    integer(kind=4),intent(in) :: List(Nlist)
+    integer(kind=4),intent(in) :: IJK(3,nptk)
+    integer(kind=4),intent(out) :: N_plus(Nlist*Nbands)
+    integer(kind=4),intent(out) :: N_minus(Nlist*Nbands)
+
+    integer(kind=4) :: mm
+    integer(kind=4) :: N_plus_reduce(Nlist*Nbands)
+    integer(kind=4) :: N_minus_reduce(Nlist*Nbands)
+
+    N_plus=0
+    N_minus=0
+    N_plus_reduce=0
+    N_minus_reduce=0
+
+    do mm=myid+1,Nbands*Nlist,numprocs
+       call Nprocesses(mm,N_plus_reduce(mm),N_minus_reduce(mm),&
+            energy,velocity,Nlist,List(1:Nlist),IJK)
+    end do
+
+    call MPI_ALLREDUCE(N_plus_reduce,N_plus,Nbands*Nlist,&
+         MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(N_minus_reduce,N_minus,Nbands*Nlist,&
+         MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,mm)
+  end subroutine Nprocesses_driver
+
   ! Scattering amplitudes of absorption processes.
   subroutine Ind_plus(mm,N_plus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
@@ -193,7 +228,6 @@ contains
                       ! (1.d-34J*s)*(1.d12/s)^(-4)*1amu^(-3)*(ev/angstrom**3)^2,
                       ! that is, 5.60626442*1.d8 THz
                       Gamma_plus(N_plus_count)=Gamma_plus(N_plus_count)*5.60626442*1.d8/nptk ! THz
-
                    end if
                 end if
              end do ! k
@@ -296,6 +330,145 @@ contains
     end if
     if(N_minus_count.ne.N_minus) write(error_unit,*) "Error: in Ind_minus, N_minus_count!=N_minus"
   end subroutine Ind_minus
+
+  ! Wrapper around Ind_plus and Ind_minus that splits the work among processors.
+  subroutine Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
+       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
+       Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
+       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
+       
+    implicit none
+
+    include "mpif.h"
+    
+    real(kind=8),intent(in) :: energy(nptk,nbands)
+    real(kind=8),intent(in) :: velocity(nptk,nbands,3)
+    complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
+    integer(kind=4),intent(in) :: NList
+    integer(kind=4),intent(in) :: List(Nlist)
+    integer(kind=4),intent(in) :: IJK(3,nptk)
+    integer(kind=4),intent(in) :: N_plus(Nlist*Nbands)
+    integer(kind=4),intent(in) :: N_minus(Nlist*Nbands)
+    integer(kind=4),intent(in) :: Ntri
+    real(kind=8),intent(in) :: Phi(3,3,3,Ntri)
+    real(kind=8),intent(in) :: R_j(3,Ntri)
+    real(kind=8),intent(in) :: R_k(3,Ntri)
+    integer(kind=4),intent(in) :: Index_i(Ntri)
+    integer(kind=4),intent(in) :: Index_j(Ntri)
+    integer(kind=4),intent(in) :: Index_k(Ntri)
+    integer(kind=4),intent(out) :: Indof2ndPhonon_plus(:)
+    integer(kind=4),intent(out) :: Indof3rdPhonon_plus(:)
+    real(kind=8),intent(out) :: Gamma_plus(:)
+    integer(kind=4),intent(out) :: Indof2ndPhonon_minus(:)
+    integer(kind=4),intent(out) :: Indof3rdPhonon_minus(:)
+    real(kind=8),intent(out) :: Gamma_minus(:)
+    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist)
+
+    integer(kind=4) :: i
+    integer(kind=4) :: ll
+    integer(kind=4) :: mm
+    integer(kind=4) :: maxsize
+    integer(kind=4) :: Ntotal_plus
+    integer(kind=4) :: Ntotal_minus
+    integer(kind=4) :: Naccum_plus(Nbands*Nlist)
+    integer(kind=4) :: Naccum_minus(Nbands*Nlist)
+    integer(kind=4),allocatable :: Indof2ndPhonon(:)
+    integer(kind=4),allocatable :: Indof3rdPhonon(:)
+    integer(kind=4),allocatable :: Indof2ndPhonon_plus_reduce(:)
+    integer(kind=4),allocatable :: Indof3rdPhonon_plus_reduce(:)
+    integer(kind=4),allocatable :: Indof2ndPhonon_minus_reduce(:)
+    integer(kind=4),allocatable :: Indof3rdPhonon_minus_reduce(:)
+    real(kind=8) :: rate_scatt_reduce(Nbands,Nlist)
+    real(kind=8),allocatable :: Gamma0(:)
+    real(kind=8),allocatable :: Gamma_plus_reduce(:)
+    real(kind=8),allocatable :: Gamma_minus_reduce(:)
+
+    maxsize=max(maxval(N_plus),maxval(N_minus))
+    allocate(Indof2ndPhonon(maxsize))
+    allocate(Indof3rdPhonon(maxsize))
+    allocate(Gamma0(maxsize))
+    
+    Naccum_plus(1)=0
+    Naccum_minus(1)=0
+    do mm=2,Nbands*Nlist
+       Naccum_plus(mm)=Naccum_plus(mm-1)+N_plus(mm-1)
+       Naccum_minus(mm)=Naccum_minus(mm-1)+N_minus(mm-1)
+    end do
+    Ntotal_plus=sum(N_plus)
+    Ntotal_minus=sum(N_minus)
+
+    allocate(Indof2ndPhonon_plus_reduce(Ntotal_plus))
+    allocate(Indof3rdPhonon_plus_reduce(Ntotal_plus))
+    allocate(Indof2ndPhonon_minus_reduce(Ntotal_minus))
+    allocate(Indof3rdPhonon_minus_reduce(Ntotal_minus))
+    allocate(Gamma_plus_reduce(Ntotal_plus))
+    allocate(Gamma_minus_reduce(Ntotal_minus))
+
+    Indof2ndPhonon_plus_reduce=0
+    Indof3rdPhonon_plus_reduce=0
+    Indof2ndPhonon_minus_reduce=0
+    Indof3rdPhonon_minus_reduce=0
+    Gamma_plus_reduce=0.d0
+    Gamma_minus_reduce=0.d0
+    rate_scatt_reduce=0.d0    
+    
+    do mm=myid+1,Nbands*NList,numprocs
+       i=modulo(mm-1,Nbands)+1
+       ll=int((mm-1)/Nbands)+1
+       if(N_plus(mm).ne.0) then
+          call Ind_plus(mm,N_plus(mm),energy,velocity,eigenvect,Nlist,List,&
+               Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+               Indof2ndPhonon(1:N_plus(mm)),Indof3rdPhonon(1:N_plus(mm)),&
+               Gamma0(1:N_plus(mm)))
+          Indof2ndPhonon_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=&
+               Indof2ndPhonon(1:N_plus(mm))
+          Indof3rdPhonon_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=&
+               Indof3rdPhonon(1:N_plus(mm))
+          Gamma_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=&
+               Gamma0(1:N_plus(mm))
+          rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma0(1:N_plus(mm)))
+       end if
+       if(N_minus(mm).ne.0) then
+          call Ind_minus(mm,N_minus(mm),energy,velocity,eigenvect,Nlist,List,&
+               Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+               Indof2ndPhonon(1:N_minus(mm)),Indof3rdPhonon(1:N_minus(mm)),&
+               Gamma0(1:N_minus(mm)))
+          Indof2ndPhonon_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=&
+               Indof2ndPhonon(1:N_minus(mm))
+          Indof3rdPhonon_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=&
+               Indof3rdPhonon(1:N_minus(mm))
+          Gamma_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=&
+               Gamma0(1:N_minus(mm))
+          rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma0(1:N_minus(mm)))*5.D-1
+       end if
+    end do
+
+    deallocate(Gamma0)
+    deallocate(Indof3rdPhonon)
+    deallocate(Indof2ndPhonon)
+
+    call MPI_ALLREDUCE(Indof2ndPhonon_plus_reduce,Indof2ndPhonon_plus,&
+         Ntotal_plus,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(Indof3rdPhonon_plus_reduce,Indof3rdPhonon_plus,&
+         Ntotal_plus,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(Indof2ndPhonon_minus_reduce,Indof2ndPhonon_minus,&
+         Ntotal_minus,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(Indof3rdPhonon_minus_reduce,Indof3rdPhonon_minus,&
+         Ntotal_minus,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(Gamma_plus_reduce,Gamma_plus,Ntotal_plus,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(Gamma_minus_reduce,Gamma_minus,Ntotal_minus,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(rate_scatt_reduce,rate_scatt,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ll)
+
+    deallocate(Indof2ndPhonon_plus_reduce)
+    deallocate(Indof3rdPhonon_plus_reduce)
+    deallocate(Indof2ndPhonon_minus_reduce)
+    deallocate(Indof3rdPhonon_minus_reduce)
+    deallocate(Gamma_plus_reduce)
+    deallocate(Gamma_minus_reduce)
+  end subroutine Ind_driver
 
   ! Mode contribution to the phase-space volume. The algorithm is very
   ! similar to the rest of subroutines in this module. No matrix
@@ -409,4 +582,66 @@ contains
     end if
     if(N_minus_count.ne.N_minus) write(error_unit,*) "Error: in D_minus, N_minus_count!=N_minus"
   end subroutine D_minus
+
+  ! Wrapper around D_plus and D_minus that splits the work among processors.
+  subroutine P3_driver(energy,velocity,Nlist,List,IJK,N_plus,N_minus,&
+       Pspace_plus_total,Pspace_plus_partial,&
+       Pspace_minus_total,Pspace_minus_partial)
+    implicit none
+
+    include "mpif.h"
+
+    real(kind=8),intent(in) :: energy(nptk,nbands)
+    real(kind=8),intent(in) :: velocity(nptk,nbands,3)
+    integer(kind=4),intent(in) :: NList
+    integer(kind=4),intent(in) :: List(Nlist)
+    integer(kind=4),intent(in) :: IJK(3,nptk)
+    integer(kind=4),intent(in) :: N_plus(Nlist*Nbands)
+    integer(kind=4),intent(in) :: N_minus(Nlist*Nbands)
+    real(kind=8),intent(out) :: Pspace_plus_total(Nbands,Nlist)
+    real(kind=8),intent(out) :: Pspace_plus_partial(Nbands,Nlist)
+    real(kind=8),intent(out) :: Pspace_minus_total(Nbands,Nlist)
+    real(kind=8),intent(out) :: Pspace_minus_partial(Nbands,Nlist)
+
+    integer(kind=4) :: ii
+    integer(kind=4) :: jj
+    integer(kind=4) :: mm
+    real(kind=8),allocatable :: Pspace_plus_tmp(:)
+    real(kind=8),allocatable :: Pspace_minus_tmp(:)
+
+    Pspace_plus_total=0.d0
+    Pspace_plus_partial=0.d0
+    Pspace_minus_total=0.d0
+    Pspace_minus_partial=0.d0
+
+    allocate(Pspace_plus_tmp(maxval(N_plus)))
+    allocate(Pspace_minus_tmp(maxval(N_minus)))
+
+    do mm=myid+1,Nbands*Nlist,numprocs
+       Pspace_plus_tmp=0.d0
+       if(N_plus(mm).ne.0) then
+          ii=modulo(mm-1,Nbands)+1
+          jj=int((mm-1)/Nbands)+1
+          call D_plus(mm,N_plus(mm),energy,velocity,Nlist,List,IJK,&
+               Pspace_plus_tmp)
+          Pspace_plus_partial(ii,jj)=Pspace_plus_partial(ii,jj)+sum(Pspace_plus_tmp)
+       end if
+       Pspace_minus_tmp=0.d0
+       if(N_minus(mm).ne.0) then
+          ii=modulo(mm-1,Nbands)+1
+          jj=int((mm-1)/Nbands)+1
+          call D_minus(mm,N_minus(mm),energy,velocity,Nlist,List,IJK,&
+               Pspace_minus_tmp)
+          Pspace_minus_partial(ii,jj)=Pspace_minus_partial(ii,jj)+sum(Pspace_minus_tmp)
+       end if
+    end do
+
+    call MPI_ALLREDUCE(Pspace_plus_partial,Pspace_plus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ii)
+    call MPI_ALLREDUCE(Pspace_minus_partial,Pspace_minus_total,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ii)
+
+    deallocate(Pspace_minus_tmp)
+    deallocate(Pspace_plus_tmp)
+  end subroutine P3_driver
 end module processes

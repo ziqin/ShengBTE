@@ -97,7 +97,7 @@ contains
     ! are exactly zero.
     if(myid.eq.0) then
        write(*,*) "Info: about to set the acoustic frequencies at Gamma to zero"
-       write(*,*) "Info: their original values were:"
+       write(*,*) "Info: original values:"
        do ii=1,3
           write(aux,"(I1)") ii
           write(*,*) "Info: omega(1,"//aux//") =",omega(1,ii),"rad/ps"
