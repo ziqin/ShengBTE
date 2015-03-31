@@ -40,6 +40,7 @@ contains
     complex(kind=8),allocatable :: eigenvect_reduce(:,:,:)
     real(kind=8) :: kspace(nptk,3),newvelocity(nbands,3)
     integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm,nptk)
+    character(len=1) :: aux
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
        do jj=1,Ngrid(2)     ! rlattvec(:,2) direction
@@ -94,6 +95,14 @@ contains
     end do
     ! Make sure that acoustic frequencies and group velocities at Gamma
     ! are exactly zero.
+    if(myid.eq.0) then
+       write(*,*) "Info: about to set the acoustic frequencies at Gamma to zero"
+       write(*,*) "Info: their original values were:"
+       do ii=1,3
+          write(aux,"(I1)") ii
+          write(*,*) "Info: omega(1,"//aux//") =",omega(1,ii),"rad/ps"
+       end do
+    end if
     omega(1,1:3)=0.d0
     velocity(1,1:3,:)=0.
   end subroutine eigenDM
