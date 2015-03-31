@@ -66,11 +66,8 @@ contains
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
     omega=energy(index_N(q(1),q(2),q(3)),i)
-    ! The following loop is very similar to the central part of
-    ! Nprocesses(), with the exception that when an allowed process is
-    ! detected its scattering amplitude is computed. This amplitude
-    ! involves the anharmonic force constants, and its precise
-    ! expression can be found in the manuscript.
+    ! Loop over all processes, detecting those that are allowed and
+    ! computing their amplitudes.
     if(omega.ne.0) then
        do j=1,Nbands
           do ii=1,nptk
@@ -229,11 +226,11 @@ contains
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
        Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
        Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
-       
+
     implicit none
 
     include "mpif.h"
-    
+
     real(kind=8),intent(in) :: energy(nptk,nbands)
     real(kind=8),intent(in) :: velocity(nptk,nbands,3)
     complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
@@ -280,7 +277,7 @@ contains
     allocate(Indof2ndPhonon(maxsize))
     allocate(Indof3rdPhonon(maxsize))
     allocate(Gamma0(maxsize))
-    
+
     Naccum_plus(1)=0
     Naccum_minus(1)=0
     do mm=2,Nbands*Nlist
@@ -303,8 +300,8 @@ contains
     Indof3rdPhonon_minus_reduce=0
     Gamma_plus_reduce=0.d0
     Gamma_minus_reduce=0.d0
-    rate_scatt_reduce=0.d0    
-    
+    rate_scatt_reduce=0.d0
+
     do mm=myid+1,Nbands*NList,numprocs
        i=modulo(mm-1,Nbands)+1
        ll=int((mm-1)/Nbands)+1
@@ -475,80 +472,6 @@ contains
        end do  ! j
     end if
   end subroutine NP_minus
- 
-
-  ! Number of absorption and emission processes.
-  subroutine Nprocesses(mm,N_plus,N_minus,energy,velocity,Nlist,List,IJK)
-    implicit none
-
-    integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk)
-    integer(kind=4),intent(out) :: N_plus,N_minus
-    real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
-
-    integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
-    integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll
-    real(kind=8) :: sigma
-    real(kind=8) :: omega,omegap,omegadp
-
-    do ii=0,Ngrid(1)-1        ! G1 direction
-       do jj=0,Ngrid(2)-1     ! G2 direction
-          do kk=0,Ngrid(3)-1  ! G3 direction
-             index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
-          end do
-       end do
-    end do
-    N_plus=0
-    N_minus=0
-    i=modulo(mm-1,Nbands)+1
-    ll=int((mm-1)/Nbands)+1
-    q=IJK(:,List(ll))
-    omega=energy(index_N(q(1),q(2),q(3)),i)
-    ! omega, omegap and omegadp are the frequencies of the three
-    ! phonons involved in each process. A locally adaptive broadening
-    ! (sigma) is computed for each process and used to determine
-    ! whether it is allowed by conservation of energy. The regularized
-    ! version of the Dirac delta chosen for this is a gaussian.
-    if (omega.ne.0) then
-       do j=1,Nbands
-          do ii=1,nptk
-             qprime=IJK(:,ii)
-             omegap=energy(index_N(qprime(1),qprime(2),qprime(3)),j)
-             !--------BEGIN absorption process-----------
-             do k=1,Nbands
-                qdprime=q+qprime
-                qdprime=modulo(qdprime,Ngrid)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
-                if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
-                   if (abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
-                      N_plus=N_plus+1
-                   endif
-                end if
-             end do ! k
-             !--------END absorption process-------------
-             !--------BEGIN emission process-----------
-             do k=1,Nbands
-                qdprime=q-qprime
-                qdprime=modulo(qdprime,Ngrid)
-                omegadp=energy(index_N(qdprime(1),qdprime(2),qdprime(3)),k)
-                if ((omegap.ne.0).and.(omegadp.ne.0)) then
-                   sigma=scalebroad*base_sigma(&
-                        velocity(index_N(qprime(1),qprime(2),qprime(3)),j,:)-&
-                        velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
-                   if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
-                      N_minus=N_minus+1
-                   endif
-                end if
-             end do ! k
-             !--------END emission process-------------
-          end do ! ii
-       end do  ! j
-    end if
-  end subroutine Nprocesses
-
 
   ! Wrapper around NP_plus and NP_minus that splits the work among processors.
   subroutine NP_driver(energy,velocity,Nlist,List,IJK,&
