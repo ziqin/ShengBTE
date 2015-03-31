@@ -517,8 +517,10 @@ program ShengBTE
      kappa_wires_reduce=0.d00
      kk=ceiling(float(nwires)/numprocs)
      do iorient=1,norientations
-        write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
-             iorient,":",orientations(:,iorient)
+        if(myid.eq.0) then
+           write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
+                iorient,":",orientations(:,iorient)
+        end if
         write(sorientation,"(I128)") iorient
         do ii=1,nptk
            do jj=1,Nbands
