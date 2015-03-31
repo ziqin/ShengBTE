@@ -31,6 +31,117 @@ module processes
 
 contains
 
+  ! Compute one of the matrix elements involved in the calculation of Ind_plus.
+  function Vp_plus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
+       eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+    implicit none
+
+    integer(kind=4),intent(in) :: i
+    integer(kind=4),intent(in) :: j
+    integer(kind=4),intent(in) :: k
+    integer(kind=4),intent(in) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
+    integer(kind=4),intent(in) :: q(3)
+    integer(kind=4),intent(in) :: qprime(3)
+    integer(kind=4),intent(in) :: qdprime(3)
+    real(kind=8),intent(in) :: realqprime(3)
+    real(kind=8),intent(in) :: realqdprime(3)    
+    complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
+    integer(kind=4),intent(in) :: Ntri
+    real(kind=8),intent(in) :: Phi(3,3,3,Ntri)
+    real(kind=8),intent(in) :: R_j(3,Ntri)
+    real(kind=8),intent(in) :: R_k(3,Ntri)
+    integer(kind=4),intent(in) :: Index_i(Ntri)
+    integer(kind=4),intent(in) :: Index_j(Ntri)
+    integer(kind=4),intent(in) :: Index_k(Ntri)
+
+    complex(kind=8) :: Vp_plus
+
+    integer(kind=4) :: ll
+    integer(kind=4) :: rr
+    integer(kind=4) :: ss
+    integer(kind=4) :: tt
+    complex(kind=8) :: prefactor
+    complex(kind=8) :: Vp0
+
+    Vp_plus=0.d0
+    
+    do ll=1,Ntri
+       prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
+            masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
+            phexp(-dot_product(realqprime/ngrid,R_j(:,ll)))*&
+            phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
+       Vp0=0.
+       do rr=1,3
+          do ss=1,3
+             do tt=1,3
+                Vp0=Vp0+Phi(tt,ss,rr,ll)*&
+                     eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
+                     conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,&
+                     ss+3*(Index_j(ll)-1)))*&
+                     conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),&
+                     k,rr+3*(Index_k(ll)-1)))
+             end do
+          end do
+       end do
+       Vp_plus=Vp_plus+prefactor*Vp0
+    end do
+  end function Vp_plus
+
+  ! Compute one of the matrix elements involved in the calculation of Ind_minus.
+  function Vp_minus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
+       eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+    implicit none
+
+    integer(kind=4),intent(in) :: i
+    integer(kind=4),intent(in) :: j
+    integer(kind=4),intent(in) :: k
+    integer(kind=4),intent(in) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
+    integer(kind=4),intent(in) :: q(3)
+    integer(kind=4),intent(in) :: qprime(3)
+    integer(kind=4),intent(in) :: qdprime(3)
+    real(kind=8),intent(in) :: realqprime(3)
+    real(kind=8),intent(in) :: realqdprime(3)    
+    complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
+    integer(kind=4),intent(in) :: Ntri
+    real(kind=8),intent(in) :: Phi(3,3,3,Ntri)
+    real(kind=8),intent(in) :: R_j(3,Ntri)
+    real(kind=8),intent(in) :: R_k(3,Ntri)
+    integer(kind=4),intent(in) :: Index_i(Ntri)
+    integer(kind=4),intent(in) :: Index_j(Ntri)
+    integer(kind=4),intent(in) :: Index_k(Ntri)
+
+    complex(kind=8) :: Vp_minus
+
+    integer(kind=4) :: ll
+    integer(kind=4) :: rr
+    integer(kind=4) :: ss
+    integer(kind=4) :: tt
+    complex(kind=8) :: prefactor
+    complex(kind=8) :: Vp0
+
+    Vp_minus=0.d0
+
+    do ll=1,Ntri
+       prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
+            masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
+            phexp(-dot_product(realqprime/ngrid,R_j(:,ll)))*&
+            phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
+       Vp0=0.
+       do rr=1,3
+          do ss=1,3
+             do tt=1,3
+                Vp0=Vp0+Phi(tt,ss,rr,ll)*&
+                     eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
+                     conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1)))*&
+                     
+                     conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
+             end do
+          end do
+       end do
+       Vp_minus=Vp_minus+prefactor*Vp0
+    end do
+  end function Vp_minus
+
   ! Scattering amplitudes of absorption processes.
   subroutine Ind_plus(mm,N_plus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
@@ -47,12 +158,12 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_plus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll,rr,ss,tt
+    integer(kind=4) :: ii,jj,kk,ll
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
-    complex(kind=8) :: Vp,Vp0,prefactor
+    complex(kind=8) :: Vp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
@@ -90,27 +201,8 @@ contains
                       Indof2ndPhonon_plus(N_plus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
                       Indof3rdPhonon_plus(N_plus_count)=(index_N(qdprime(1),qdprime(2),qdprime(3))-1)*Nbands+k
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      !--------BEGIN calculation of Vp-----------
-                      Vp=0.
-                      do ll=1,Ntri
-                         prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
-                              masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-                              phexp(dot_product(realqprime/ngrid,R_j(:,ll)))*&
-                              phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
-                         Vp0=0.
-                         do rr=1,3
-                            do ss=1,3
-                               do tt=1,3
-                                  Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                                       eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
-                                       eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1))*&
-                                       conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
-                               end do
-                            end do
-                         end do
-                         Vp=Vp+prefactor*Vp0
-                      end do
-                      !--------END calculation of Vp-------------
+                      Vp=Vp_plus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
+                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_plus(N_plus_count)=hbarp*pi/4.d0*(fBEprime-fBEdprime)*&
                            exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
@@ -143,12 +235,12 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll,rr,ss,tt
+    integer(kind=4) :: ii,jj,kk,ll
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) ::  omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
-    complex(kind=8) :: Vp,Vp0,prefactor
+    complex(kind=8) :: Vp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
        do jj=0,Ngrid(2)-1     ! G2 direction
@@ -184,28 +276,8 @@ contains
                       Indof2ndPhonon_minus(N_minus_count)=(index_N(qprime(1),qprime(2),qprime(3))-1)*Nbands+j
                       Indof3rdPhonon_minus(N_minus_count)=(index_N(qdprime(1),qdprime(2),qdprime(3))-1)*Nbands+k
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      !--------BEGIN calculation of Vp-----------
-                      Vp=0.
-                      do ll=1,Ntri
-                         prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
-                              masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-                              phexp(-dot_product(realqprime/ngrid,R_j(:,ll)))*&
-                              phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
-                         Vp0=0.
-                         do rr=1,3
-                            do ss=1,3
-                               do tt=1,3
-                                  Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                                       eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
-                                       conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1)))*&
-
-                                       conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
-                               end do
-                            end do
-                         end do
-                         Vp=Vp+prefactor*Vp0
-                      end do
-                      !--------END calculation of Vp-------------
+                      Vp=Vp_minus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
+                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_minus(N_minus_count)=hbarp*pi/4.d0*(fBEprime+fBEdprime+1)*&
                            exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
@@ -534,12 +606,12 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll,rr,ss,tt
+    integer(kind=4) :: ii,jj,kk,ll
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
-    complex(kind=8) :: Vp,Vp0,prefactor
+    complex(kind=8) :: Vp
 
     Gamma_plus=0.d00
     do ii=0,Ngrid(1)-1
@@ -572,27 +644,8 @@ contains
                         velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      !--------BEGIN calculation of Vp-----------
-                      Vp=0.
-                      do ll=1,Ntri
-                         prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
-                              masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-                              phexp(dot_product(realqprime/ngrid,R_j(:,ll)))*&
-                              phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
-                         Vp0=0.
-                         do rr=1,3
-                            do ss=1,3
-                               do tt=1,3
-                                  Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                                       eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
-                                       eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1))*&
-                                       conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
-                               end do
-                            end do
-                         end do
-                         Vp=Vp+prefactor*Vp0
-                      end do
-                      !--------END calculation of Vp-------------
+                      Vp=Vp_plus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
+                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_plus=Gamma_plus+hbarp*pi/4.d0*(fBEprime-fBEdprime)*&
                            exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
@@ -621,12 +674,12 @@ contains
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
-    integer(kind=4) :: ii,jj,kk,ll,rr,ss,tt
+    integer(kind=4) :: ii,jj,kk,ll
     real(kind=8) :: sigma
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) ::  omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
-    complex(kind=8) :: Vp,Vp0,prefactor
+    complex(kind=8) :: Vp
 
     Gamma_minus=0.d00
     do ii=0,Ngrid(1)-1
@@ -660,28 +713,8 @@ contains
                         velocity(index_N(qdprime(1),qdprime(2),qdprime(3)),k,:))
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      !--------BEGIN calculation of Vp-----------
-                      Vp=0.
-                      do ll=1,Ntri
-                         prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
-                              masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-                              phexp(-dot_product(realqprime/ngrid,R_j(:,ll)))*&
-                              phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
-                         Vp0=0.
-                         do rr=1,3
-                            do ss=1,3
-                               do tt=1,3
-                                  Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                                       eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
-                                       conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1)))*&
-
-                                       conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
-                               end do
-                            end do
-                         end do
-                         Vp=Vp+prefactor*Vp0
-                      end do
-                      !--------END calculation of Vp-------------
+                      Vp=Vp_minus(i,j,k,index_N,q,qprime,qdprime,realqprime,realqdprime,&
+                           eigenvect,Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_minus=Gamma_minus+hbarp*pi/4.d0*(fBEprime+fBEdprime+1)*&
                            exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)*abs(Vp)**2
