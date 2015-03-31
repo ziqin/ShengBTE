@@ -518,7 +518,7 @@ contains
     call MPI_ALLREDUCE(Pspace_minus_reduce,Pspace_minus_total,Nbands*Nlist,&
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
   end subroutine NP_driver
-  
+
   ! RTA-only version of Ind_plus.
   subroutine RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
@@ -542,9 +542,9 @@ contains
     complex(kind=8) :: Vp,Vp0,prefactor
 
     Gamma_plus=0.d00
-    do ii=0,Ngrid(1)-1       
-       do jj=0,Ngrid(2)-1    
-          do kk=0,Ngrid(3)-1 
+    do ii=0,Ngrid(1)-1
+       do jj=0,Ngrid(2)-1
+          do kk=0,Ngrid(3)-1
              index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
        end do
@@ -629,8 +629,8 @@ contains
     complex(kind=8) :: Vp,Vp0,prefactor
 
     Gamma_minus=0.d00
-    do ii=0,Ngrid(1)-1        
-       do jj=0,Ngrid(2)-1     
+    do ii=0,Ngrid(1)-1
+       do jj=0,Ngrid(2)-1
           do kk=0,Ngrid(3)-1
              index_N(ii,jj,kk)=(kk*Ngrid(2)+jj)*Ngrid(1)+ii+1
           end do
@@ -674,7 +674,7 @@ contains
                                   Vp0=Vp0+Phi(tt,ss,rr,ll)*&
                                        eigenvect(index_N(q(1),q(2),q(3)),i,tt+3*(Index_i(ll)-1))*&
                                        conjg(eigenvect(index_N(qprime(1),qprime(2),qprime(3)),j,ss+3*(Index_j(ll)-1)))*&
-                                       
+
                                        conjg(eigenvect(index_N(qdprime(1),qdprime(2),qdprime(3)),k,rr+3*(Index_k(ll)-1)))
                                end do
                             end do
@@ -695,4 +695,51 @@ contains
     Gamma_minus=Gamma_minus*5.60626442*1.d8/nptk
   end subroutine RTA_minus
 
+  ! Wrapper around RTA_plus and RTA_minus that splits the work among processors.
+  subroutine RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
+       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt)
+    implicit none
+
+    include "mpif.h"
+
+    real(kind=8),intent(in) :: energy(nptk,nbands)
+    real(kind=8),intent(in) :: velocity(nptk,nbands,3)
+    complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
+    integer(kind=4),intent(in) :: NList
+    integer(kind=4),intent(in) :: List(Nlist)
+    integer(kind=4),intent(in) :: IJK(3,nptk)
+    integer(kind=4),intent(in) :: Ntri
+    real(kind=8),intent(in) :: Phi(3,3,3,Ntri)
+    real(kind=8),intent(in) :: R_j(3,Ntri)
+    real(kind=8),intent(in) :: R_k(3,Ntri)
+    integer(kind=4),intent(in) :: Index_i(Ntri)
+    integer(kind=4),intent(in) :: Index_j(Ntri)
+    integer(kind=4),intent(in) :: Index_k(Ntri)
+    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist)
+
+    integer(kind=4) :: i
+    integer(kind=4) :: ll
+    integer(kind=4) :: mm
+    real(kind=8) :: Gamma_plus,Gamma_minus
+    real(kind=8) :: rate_scatt_reduce(Nbands,Nlist)
+
+    rate_scatt=0.d00
+    rate_scatt_reduce=0.d00
+
+    do mm=myid+1,Nbands*NList,numprocs
+       i=modulo(mm-1,Nbands)+1
+       ll=int((mm-1)/Nbands)+1
+       call RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
+            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+            Gamma_plus)
+       rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+Gamma_plus
+       call RTA_minus(mm,energy,velocity,eigenvect,Nlist,List,&
+            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+            Gamma_minus)
+       rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+Gamma_minus*5.D-1
+    end do
+
+    call MPI_ALLREDUCE(rate_scatt_reduce,rate_scatt,Nbands*Nlist,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+  end subroutine RTA_driver
 end module processes

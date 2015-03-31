@@ -115,7 +115,7 @@ program ShengBTE
         eqclasses(ALLEquiList(kk,ll))=List(ll)
      end do
   end do
-  
+
 
   do ii=1,Ngrid(1)
      do jj=1,Ngrid(2)
@@ -204,7 +204,7 @@ program ShengBTE
 
   call calc_dos(energy,velocity,eigenvect,nlist,list,&
        dos,pdos,rate_scatt_isotope)
-  
+
   if(myid.eq.0) then
      open(1,file="BTE.dos",status="replace")
      do mm=1,Nlist
@@ -229,7 +229,7 @@ program ShengBTE
      end do
      close(1)
   end if
-  
+
   allocate(rate_scatt(Nbands,Nlist))
   allocate(tau_zero(Nbands,Nlist))
   allocate(tau(Nbands,Nlist))
@@ -246,7 +246,7 @@ program ShengBTE
   ! N_minus: number of allowed emission processes.
   allocate(N_plus(Nlist*Nbands))
   allocate(N_minus(Nlist*Nbands))
-  ! Phase space volume per mode and their sum.  
+  ! Phase space volume per mode and their sum.
   allocate(Pspace_plus_total(Nbands,Nlist))
   allocate(Pspace_minus_total(Nbands,Nlist))
 
@@ -325,17 +325,25 @@ program ShengBTE
 
   ! This is the most expensive part of the calculation: obtaining the
   ! three-phonon scattering amplitudes for all allowed processes.
-  allocate(Indof2ndPhonon_plus(Ntotal_plus))
-  allocate(Indof3rdPhonon_plus(Ntotal_plus))
-  allocate(Indof2ndPhonon_minus(Ntotal_minus))
-  allocate(Indof3rdPhonon_minus(Ntotal_minus))
-  allocate(Gamma_plus(Ntotal_plus))
-  allocate(Gamma_minus(Ntotal_minus))
+  ! When the iterative solution to the full linearized BTE is not
+  ! requested (i.e., when the relaxation-time approximation is
+  ! enough) we use optimized routines with a much smaller memory footprint.
+  if(convergence) then
+     allocate(Indof2ndPhonon_plus(Ntotal_plus))
+     allocate(Indof3rdPhonon_plus(Ntotal_plus))
+     allocate(Indof2ndPhonon_minus(Ntotal_minus))
+     allocate(Indof3rdPhonon_minus(Ntotal_minus))
+     allocate(Gamma_plus(Ntotal_plus))
+     allocate(Gamma_minus(Ntotal_minus))
 
-  call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
-       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
-       Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
-       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
+     call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
+          Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
+          Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
+          Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
+  else
+     call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
+          Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt)
+  end if
 
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
@@ -411,7 +419,6 @@ program ShengBTE
            write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
         end do
         close(2004)
-
      end if
      close(2001)
      close(2002)
