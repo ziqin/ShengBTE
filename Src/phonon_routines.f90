@@ -39,7 +39,7 @@ contains
     real(kind=8),allocatable :: omega_reduce(:,:),velocity_reduce(:,:,:)
     complex(kind=8),allocatable :: eigenvect_reduce(:,:,:)
     real(kind=8) :: kspace(nptk,3),newvelocity(nbands,3)
-    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm,nptk)
+    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm_rot,nptk)
     character(len=1) :: aux
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
@@ -82,7 +82,7 @@ contains
     do ii=1,nptk
        newvelocity=0.
        kk=0
-       do jj=1,nsymm
+       do jj=1,nsymm_rot
           if(ID_equi(jj,ii).eq.ii) then
              newvelocity=newvelocity+transpose(&
                   matmul(crotations(:,:,jj),transpose(velocity(ii,:,:))))

@@ -32,7 +32,7 @@ contains
   subroutine iteration0(Nlist,Nequi,ALLEquiList,omega,velocity,tau_zero,F_n)
     implicit none
 
-    integer(kind=4),intent(in) :: Nlist,Nequi(Nlist),ALLEquiList(Nsymm,nptk)
+    integer(kind=4),intent(in) :: Nlist,Nequi(Nlist),ALLEquiList(Nsymm_rot,nptk)
     real(kind=8),intent(in) :: omega(nptk,Nbands),velocity(nptk,Nbands,3),tau_zero(Nbands,Nlist)
     real(kind=8),intent(out) :: F_n(Nbands,nptk,3)
 
@@ -55,8 +55,8 @@ contains
        velocity,Gamma_plus,Gamma_minus,tau_zero,F_n)
     implicit none
 
-    integer(kind=4),intent(in) :: Nlist,Nequi(Nlist),ALLEquiList(Nsymm,nptk)
-    integer(kind=4),intent(in) :: TypeofSymmetry(Nsymm,nptk)
+    integer(kind=4),intent(in) :: Nlist,Nequi(Nlist),ALLEquiList(Nsymm_rot,nptk)
+    integer(kind=4),intent(in) :: TypeofSymmetry(Nsymm_rot,nptk)
     integer(kind=4),intent(in) :: N_plus(Nlist*Nbands),N_minus(Nlist*Nbands),Ntotal_plus,Ntotal_minus
     integer(kind=4),intent(in) :: Indof2ndPhonon_plus(Ntotal_plus),Indof3rdPhonon_plus(Ntotal_plus)
     integer(kind=4),intent(in) :: Indof2ndPhonon_minus(Ntotal_minus),Indof3rdPhonon_minus(Ntotal_minus)
@@ -64,7 +64,7 @@ contains
     real(kind=8),intent(in) :: Gamma_plus(Ntotal_plus),Gamma_minus(Ntotal_minus),tau_zero(nbands,nlist)
     real(kind=8),intent(inout) :: F_n(Nbands,nptk,3)
 
-    integer(kind=4) :: ID_equi(Nsymm,nptk),Naccum_plus,Naccum_minus
+    integer(kind=4) :: ID_equi(Nsymm_rot,nptk),Naccum_plus,Naccum_minus
     integer(kind=4) :: i,j,k,jj,kk,ll,mm,nn
     real(kind=8) :: DeltaF(Nbands,nptk,3)
 
@@ -116,8 +116,8 @@ contains
        Indof3rdPhonon_minus,omega,velocity,Gamma_plus,Gamma_minus,tau_zero,F_n)
     implicit none
 
-    integer(kind=4),intent(in) :: Nlist,Nequi(Nlist),ALLEquiList(Nsymm,nptk)
-    integer(kind=4),intent(in) :: TypeofSymmetry(Nsymm,nptk)
+    integer(kind=4),intent(in) :: Nlist,Nequi(Nlist),ALLEquiList(Nsymm_rot,nptk)
+    integer(kind=4),intent(in) :: TypeofSymmetry(Nsymm_rot,nptk)
     integer(kind=4),intent(in) :: N_plus(Nlist*Nbands),N_minus(Nlist*Nbands),Ntotal_plus,Ntotal_minus
     integer(kind=4),intent(in) :: Indof2ndPhonon_plus(Ntotal_plus),Indof3rdPhonon_plus(Ntotal_plus)
     integer(kind=4),intent(in) :: Indof2ndPhonon_minus(Ntotal_minus),Indof3rdPhonon_minus(Ntotal_minus)
@@ -125,7 +125,7 @@ contains
     real(kind=8),intent(in) :: Gamma_plus(Ntotal_plus),Gamma_minus(Ntotal_minus),tau_zero(nbands,nlist)
     real(kind=8),intent(inout) :: F_n(Nbands,nptk)
 
-    integer(kind=4) :: ID_equi(Nsymm,nptk),Naccum_plus,Naccum_minus
+    integer(kind=4) :: ID_equi(Nsymm_Rot,nptk),Naccum_plus,Naccum_minus
     integer(kind=4) :: i,j,k,jj,kk,ll,mm,nn
     real(kind=8) :: DeltaF(Nbands,nptk)
 

@@ -42,11 +42,11 @@ contains
     include "mpif.h"
 
     integer(kind=4),intent(out) :: Nlist,Nequi(nptk),List(nptk)
-    integer(kind=4),intent(out) :: ALLEquiList(Nsymm,nptk),TypeofSymmetry(Nsymm,nptk)
+    integer(kind=4),intent(out) :: ALLEquiList(Nsymm_rot,nptk),TypeofSymmetry(Nsymm_rot,nptk)
 
-    integer(kind=4) :: ID_equi(nsymm,nptk),ii,jj,ll,iaux,Ntot,ierr
+    integer(kind=4) :: ID_equi(Nsymm_rot,nptk),ii,jj,ll,iaux,Ntot,ierr
 
-    integer(kind=4) :: NAllList,AllList(nptk),EquiList(nsymm)
+    integer(kind=4) :: NAllList,AllList(nptk),EquiList(Nsymm_rot)
 
     call symmetry_map(ID_equi)
 
@@ -79,7 +79,7 @@ contains
              call MPI_BARRIER(MPI_COMM_WORLD,ierr)
              call MPI_FINALIZE(ierr)
           end if
-          do ll=1,Nsymm
+          do ll=1,Nsymm_rot
              iaux=1
              if (ll.ne.1) then
                 do jj=1,Nequi(Nlist)

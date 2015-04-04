@@ -32,7 +32,7 @@ contains
   subroutine ScalingOfTau(Nlist,Nequi,ALLEquiList,velocity_z,&
        velocity,tauzero_wedge,radnw,ffunc)
     implicit none
-    integer(kind=4),intent(in) :: Nlist,Nequi(nptk),ALLEquiList(Nsymm,nptk)
+    integer(kind=4),intent(in) :: Nlist,Nequi(nptk),ALLEquiList(Nsymm_rot,nptk)
     real(kind=8),intent(in) :: velocity(nptk,Nbands,3),velocity_z(nptk,Nbands)
     real(kind=8),intent(in) :: tauzero_wedge(Nbands,Nlist),radnw
     real(kind=8),intent(out) :: ffunc(nptk,Nbands)
