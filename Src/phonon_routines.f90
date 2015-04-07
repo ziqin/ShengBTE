@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -39,7 +39,8 @@ contains
     real(kind=8),allocatable :: omega_reduce(:,:),velocity_reduce(:,:,:)
     complex(kind=8),allocatable :: eigenvect_reduce(:,:,:)
     real(kind=8) :: kspace(nptk,3),newvelocity(nbands,3)
-    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm,nptk)
+    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm_rot,nptk)
+    character(len=1) :: aux
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
        do jj=1,Ngrid(2)     ! rlattvec(:,2) direction
@@ -81,7 +82,7 @@ contains
     do ii=1,nptk
        newvelocity=0.
        kk=0
-       do jj=1,nsymm
+       do jj=1,nsymm_rot
           if(ID_equi(jj,ii).eq.ii) then
              newvelocity=newvelocity+transpose(&
                   matmul(crotations(:,:,jj),transpose(velocity(ii,:,:))))
@@ -92,6 +93,18 @@ contains
           velocity(ii,:,:)=newvelocity/kk
        end if
     end do
+    ! Make sure that acoustic frequencies and group velocities at Gamma
+    ! are exactly zero.
+    if(myid.eq.0) then
+       write(*,*) "Info: about to set the acoustic frequencies at Gamma to zero"
+       write(*,*) "Info: original values:"
+       do ii=1,3
+          write(aux,"(I1)") ii
+          write(*,*) "Info: omega(1,"//aux//") =",omega(1,ii),"rad/ps"
+       end do
+    end if
+    omega(1,1:3)=0.d0
+    velocity(1,1:3,:)=0.
   end subroutine eigenDM
 
   ! Compute phonon dispersions, Phonopy style.
