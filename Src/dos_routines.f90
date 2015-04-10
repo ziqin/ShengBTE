@@ -121,14 +121,19 @@ contains
                    dos(nn,mm)=dos(nn,mm)+weight
                    do kk=1,natoms
                       prod=(abs(dot_product(&
-                           eigenvect(list(mm),nn,((kk-1)*3+1):((kk-1)*3+3)),&
-                           eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)))))**2
-                      pdos(nn,mm,kk)=pdos(nn,mm,kk)+weight*prod
-                      if(isotopes) then
+                           eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)),&
+                           eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)))))
+                      pdos(nn,mm,kk)=pdos(nn,mm,kk)+weight*prod                      
+                   end do
+                   if(isotopes) then
+                      do kk=1,natoms
+                         prod=(abs(dot_product(&
+                              eigenvect(list(mm),nn,((kk-1)*3+1):((kk-1)*3+3)),&
+                              eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)))))**2
                          rate_scatt_isotope(nn,mm)=rate_scatt_isotope(nn,mm)+&
                               weight*prod*gfactors(types(kk))
-                      end if
-                   end do
+                      end do
+                   end if
                 end if
              end do
           end do
