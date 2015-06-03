@@ -72,6 +72,8 @@ program ShengBTE
   character(len=4) :: aux
   character(len=128) :: sorientation
 
+  real(kind=8) :: dnrm2
+
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD,numprocs,ierr)
@@ -373,6 +375,18 @@ program ShengBTE
      end do
   end do
 
+  ! Compute the normalized boundary scattering rates.
+  do ll=1,Nlist
+     do ii=1,Nbands
+        tau_b(ii,ll)=1.d00/dnrm2(velocity(List(ll),ii,:))
+     end do
+  end do
+  do ll=1,nptk
+     do ii=1,Nbands
+        tau_b2(ii,ll)=1.d00/dnrm2(velocity(ll,ii,:))
+     end do
+  end do
+
   ! Set up everything to start the iterative process.
   call iteration0(Nlist,Nequi,ALLEquiList,energy,velocity,tau_zero,F_n)
   F_n_0=F_n
@@ -429,7 +443,6 @@ program ShengBTE
         do ii=1,Nbands
            tau(ii,ll)=dot_product(F_n(ii,List(ll),:),velocity(List(ll),ii,:))/&
                 (dot_product(velocity(List(ll),ii,:),velocity(List(ll),ii,:))*energy(List(ll),ii))
-           tau_b(ii,ll)=1/dot_product(velocity(List(ll),ii,:),velocity(List(ll),ii,:))
         end do
      end do
      write(aux,"(I0)") Nbands
@@ -445,7 +458,6 @@ program ShengBTE
         do ii=1,Nbands
            tau2(ii,ll)=dot_product(F_n(ii,ll,:),velocity(ll,ii,:))/&
                 (dot_product(velocity(ll,ii,:),velocity(ll,ii,:))*energy(ll,ii))
-           tau_b2(ii,ll)=1/dot_product(velocity(ll,ii,:),velocity(ll,ii,:))
         end do
      end do
      write(aux,"(I0)") Nbands
