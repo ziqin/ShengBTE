@@ -378,12 +378,12 @@ program ShengBTE
   ! Compute the normalized boundary scattering rates.
   do ll=1,Nlist
      do ii=1,Nbands
-        tau_b(ii,ll)=1.d00/dnrm2(velocity(List(ll),ii,:))
+        tau_b(ii,ll)=1.d00/dnrm2(3,velocity(List(ll),ii,:),1)
      end do
   end do
   do ll=1,nptk
      do ii=1,Nbands
-        tau_b2(ii,ll)=1.d00/dnrm2(velocity(ll,ii,:))
+        tau_b2(ii,ll)=1.d00/dnrm2(3,velocity(ll,ii,:),1)
      end do
   end do
 
