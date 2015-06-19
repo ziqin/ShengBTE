@@ -47,7 +47,10 @@ module config
 
   integer(kind=4) :: nsymm,nsymm_rot
   integer(kind=4),allocatable :: rotations(:,:,:)
+  integer(kind=4),allocatable :: rotations_orig(:,:,:)
   real(kind=8),allocatable :: crotations(:,:,:),qrotations(:,:,:)
+  real(kind=8),allocatable :: crotations_orig(:,:,:)
+  real(kind=8),allocatable :: qrotations_orig(:,:,:)
   character(len=10) :: international
 
   ! MPI variables, assigned in ShengBTE.f90.
@@ -209,45 +212,39 @@ contains
     allocate(translations(3,nsymm),rotations(3,3,nsymm_rot),&
          ctranslations(3,nsymm),crotations(3,3,nsymm_rot),&
          qrotations(3,3,nsymm_rot))
+    allocate(rotations_orig(3,3,nsymm),&
+         crotations_orig(3,3,nsymm),&
+         qrotations_orig(3,3,nsymm))
     call get_operations(lattvec,natoms,types,positions,nsymm,&
-         rotations,translations,international)
+         rotations_orig,translations,international)
+    rotations(:,:,1:nsymm)=rotations_orig
     if(myid.eq.0)write(*,*) "Info: symmetry group ",trim(international)," detected"
     if(myid.eq.0)write(*,*) "Info: ",nsymm," symmetry operations"
-    call get_cartesian_operations(lattvec,nsymm,rotations,translations,&
-         crotations,ctranslations)
+    call get_cartesian_operations(lattvec,nsymm,rotations_orig,translations,&
+         crotations_orig,ctranslations)
+    crotations(:,:,1:nsymm)=crotations_orig
     deallocate(translations,ctranslations)
 
     ! Transform the rotation matrices to the reciprocal-space basis.
     do i=1,nsymm
        tmp1=matmul(transpose(lattvec),lattvec)
-       tmp2=transpose(rotations(:,:,i))
+       tmp2=transpose(rotations_orig(:,:,i))
        tmp3=tmp1
        call dgesv(3,3,tmp1,3,P,tmp2,3,info)
-       qrotations(:,:,i)=transpose(matmul(tmp2,tmp3))
+       qrotations_orig(:,:,i)=transpose(matmul(tmp2,tmp3))
     end do
+    qrotations(:,:,1:nsymm)=qrotations_orig
 
     ! Fill the second half of the rotation matrix list
     ! using time reversal symmetry.
-    rotations(:,:,nsymm+1:2*nsymm)=-rotations(:,:,1:nsymm)
-    qrotations(:,:,nsymm+1:2*nsymm)=-qrotations(:,:,1:nsymm)
-    crotations(:,:,nsymm+1:2*nsymm)=-crotations(:,:,1:nsymm)
+    rotations(:,:,nsymm+1:2*nsymm)=-rotations_orig(:,:,1:nsymm)
+    qrotations(:,:,nsymm+1:2*nsymm)=-qrotations_orig(:,:,1:nsymm)
+    crotations(:,:,nsymm+1:2*nsymm)=-crotations_orig(:,:,1:nsymm)
 
     ! Find rotations that are either duplicated or incompatible with
     ! the q-point grid.
     allocate(ID_Equi(nsymm_rot,nptk),valid(nsymm_rot))
     valid=.TRUE.
-    ll=0
-    do ii=2,nsymm_rot
-       do jj=1,ii-1
-          if(.not.valid(jj))cycle
-          if(all(rotations(:,:,ii).eq.rotations(:,:,jj))) then
-             valid(ii)=.FALSE.
-             ll=ll+1
-             exit
-          end if
-       end do
-    end do
-    if(myid.eq.0.and.ll.ne.0)write(*,*) "Info:",ll,"duplicated rotations will be discarded"
     call symmetry_map(ID_equi)
     jj=0
     do ii=1,nsymm_rot
@@ -257,25 +254,37 @@ contains
        end if
     end do
     if(myid.eq.0.and.jj.ne.0)write(*,*) "Info:",jj,"rotations are incompatible with the q-point grid and will be discarded"
+    ll=0
+    do ii=2,nsymm_rot
+       do i=1,ii-1
+          if(.not.valid(i))cycle
+          if(all(rotations(:,:,ii).eq.rotations(:,:,i))) then
+             valid(ii)=.FALSE.
+             ll=ll+1
+             exit
+          end if
+       end do
+    end do
+    if(myid.eq.0.and.ll.ne.0)write(*,*) "Info:",ll,"duplicated rotations will be discarded"
     ! Filter out those rotations through a series of move_alloc calls.
     ! Arrays to take into account: rotations,crotations,qrotations.
     if(ll+jj.ne.0) then
-       call move_alloc(rotations,rtmp)
-       call move_alloc(crotations,crtmp)
-       call move_alloc(qrotations,qrtmp)
-       allocate(rotations(3,3,nsymm_rot-ll-jj),crotations(3,3,nsymm_rot-ll-jj),&
-            qrotations(3,3,nsymm_rot-ll-jj))
+       allocate(rtmp(3,3,nsymm_rot-ll-jj))
+       allocate(crtmp(3,3,nsymm_rot-ll-jj))
+       allocate(qrtmp(3,3,nsymm_rot-ll-jj))
        kk=0
        do ii=1,nsymm_rot
           if(valid(ii)) then
              kk=kk+1
-             rotations(:,:,kk)=rtmp(:,:,ii)
-             crotations(:,:,kk)=crtmp(:,:,ii)
-             qrotations(:,:,kk)=qrtmp(:,:,ii)
+             rtmp(:,:,kk)=rotations(:,:,ii)
+             crtmp(:,:,kk)=crotations(:,:,ii)
+             qrtmp(:,:,kk)=qrotations(:,:,ii)
           end if
        end do
        nsymm_rot=nsymm_rot-ll-jj
-       deallocate(rtmp,crtmp,qrtmp)
+       call move_alloc(rtmp,rotations)
+       call move_alloc(crtmp,crotations)
+       call move_alloc(qrtmp,qrotations)
     end if
     deallocate(ID_Equi,valid)
   end subroutine read_config
@@ -327,6 +336,44 @@ contains
        end do
     end do
   end subroutine symmetry_map
+
+  ! Equivalent to symm, but using qrotations_orig.
+  subroutine symm_orig(r_in,r_out)
+    implicit none
+    integer(kind=4),intent(in) :: r_in(3)
+    real(kind=8),intent(out) :: r_out(3,nsymm)
+
+    integer(kind=4) :: ii
+
+    do ii=1,nsymm
+       r_out(:,ii)=ngrid*matmul(qrotations_orig(:,:,ii),&
+            dble(r_in)/ngrid)
+    end do
+  end subroutine symm_orig
+
+  ! Equivalent to symmetry_map, but using symm_orig.
+  subroutine symmetry_map_orig(ID_equi)
+    implicit none
+    integer(kind=4),intent(out) :: ID_equi(nsymm,nptk)
+
+    integer(kind=4) :: Ind_cell(3,nptk)
+    integer(kind=4) :: i,isym,ivec(3)
+    real(kind=8) :: vec(3),vec_symm(3,nsymm),dnrm2
+
+    call Id2Ind(Ind_cell)
+    do i=1,nptk
+       call symm_orig(Ind_cell(:,i),vec_symm)
+       do isym=1,nsymm
+          vec=vec_symm(:,isym)
+          ivec=nint(vec)
+          if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-2) then
+             ID_equi(isym,i)=-1
+          else
+             ID_equi(isym,i)=Ind2Id(modulo(ivec,ngrid))
+          end if
+       end do
+    end do
+  end subroutine symmetry_map_orig
 
   ! Create a table that can be used to demultiplex cell indices.
   subroutine Id2ind(Ind_cell)

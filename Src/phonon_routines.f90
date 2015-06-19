@@ -39,7 +39,7 @@ contains
     real(kind=8),allocatable :: omega_reduce(:,:),velocity_reduce(:,:,:)
     complex(kind=8),allocatable :: eigenvect_reduce(:,:,:)
     real(kind=8) :: kspace(nptk,3),newvelocity(nbands,3)
-    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm_rot,nptk)
+    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm,nptk)
     character(len=1) :: aux
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
@@ -78,14 +78,15 @@ contains
     deallocate(omega_reduce,velocity_reduce,eigenvect_reduce)
     ! Make sure that group velocities have the right symmetry at each q point.
     ! This solves the problem of undefined components for degenerate modes.
-    call symmetry_map(ID_equi)
+    call symmetry_map_orig(ID_equi)
     do ii=1,nptk
        newvelocity=0.
        kk=0
-       do jj=1,nsymm_rot
+       do jj=1,nsymm
           if(ID_equi(jj,ii).eq.ii) then
              newvelocity=newvelocity+transpose(&
-                  matmul(crotations(:,:,jj),transpose(velocity(ii,:,:))))
+                  matmul(crotations_orig(:,:,jj),&
+             transpose(velocity(ii,:,:))))
              kk=kk+1
           end if
        end do
