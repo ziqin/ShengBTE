@@ -67,8 +67,8 @@ contains
     do ll=1,Ntri
        prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
             masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-            phexp(dot_product(realqprime/ngrid,R_j(:,ll)))*&
-            phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
+            phexp(dot_product(realqprime,R_j(:,ll)))*&
+            phexp(-dot_product(realqdprime,R_k(:,ll)))
        Vp0=0.d0
        do rr=1,3
           do ss=1,3
@@ -120,8 +120,8 @@ contains
     do ll=1,Ntri
        prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
             masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
-            phexp(-dot_product(realqprime/ngrid,R_j(:,ll)))*&
-            phexp(-dot_product(realqdprime/ngrid,R_k(:,ll)))
+            phexp(-dot_product(realqprime,R_j(:,ll)))*&
+            phexp(-dot_product(realqdprime,R_k(:,ll)))
        Vp0=0.
        do rr=1,3
           do ss=1,3
@@ -178,14 +178,14 @@ contains
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
-             realqprime=matmul(rlattvec,qprime)
+             realqprime=matmul(rlattvec,qprime/dble(ngrid))
              omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN absorption process-----------
              do k=1,Nbands
                 qdprime=q+qprime
                 qdprime=modulo(qdprime,Ngrid)
-                realqdprime=matmul(rlattvec,qdprime)
+                realqdprime=matmul(rlattvec,qdprime/dble(ngrid))
                 ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
                 omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
@@ -255,14 +255,14 @@ contains
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
-             realqprime=matmul(rlattvec,qprime)
+             realqprime=matmul(rlattvec,qprime/dble(ngrid))
              omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN emission process-----------
              do k=1,Nbands
                 qdprime=q-qprime
                 qdprime=modulo(qdprime,Ngrid)
-                realqdprime=matmul(rlattvec,qdprime)
+                realqdprime=matmul(rlattvec,qdprime/dble(ngrid))
                 ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
                 omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
@@ -630,14 +630,14 @@ contains
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
-             realqprime=matmul(rlattvec,qprime)
+             realqprime=matmul(rlattvec,qprime/dble(ngrid))
              omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN absorption process-----------
              do k=1,Nbands
                 qdprime=q+qprime
                 qdprime=modulo(qdprime,Ngrid)
-                realqdprime=matmul(rlattvec,qdprime)
+                realqdprime=matmul(rlattvec,qdprime/dble(ngrid))
                 ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
                 omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
@@ -701,14 +701,14 @@ contains
        do j=1,Nbands
           do ii=1,nptk
              qprime=IJK(:,ii)
-             realqprime=matmul(rlattvec,qprime)
+             realqprime=matmul(rlattvec,qprime/dble(ngrid))
              omegap=energy(ii,j)
              fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN emission process-----------
              do k=1,Nbands
                 qdprime=q-qprime
                 qdprime=modulo(qdprime,Ngrid)
-                realqdprime=matmul(rlattvec,qdprime)
+                realqdprime=matmul(rlattvec,qdprime/dble(ngrid))
                 ss=Index_N(qdprime(1),qdprime(2),qdprime(3))
                 omegadp=energy(ss,k)
                 if ((omegap.ne.0).and.(omegadp.ne.0)) then
