@@ -380,12 +380,11 @@ contains
     implicit none
     integer(kind=4),intent(out) :: Ind_cell(3,nptk)
 
-    integer(kind=4) :: ii
+    integer(kind=4) :: ii,tmp1
 
     do ii=1,nptk
-       Ind_cell(3,ii)=int((ii-1)/(Ngrid(1)*Ngrid(2)))
-       Ind_cell(2,ii)=int(modulo(ii-1,Ngrid(1)*Ngrid(2))/Ngrid(1))
-       Ind_cell(1,ii)=modulo(ii-1,Ngrid(1))
+       call divmod(ii-1,Ngrid(1),tmp1,Ind_cell(1,ii))
+       call divmod(tmp1,Ngrid(2),Ind_cell(3,ii),Ind_cell(2,ii))
     end do
   end subroutine Id2ind
 
