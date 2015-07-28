@@ -57,7 +57,8 @@ program ShengBTE
   real(kind=8),allocatable :: Phi(:,:,:,:),R_j(:,:),R_k(:,:)
 
   integer(kind=4) :: nlist,Ntotal_plus,Ntotal_minus
-  integer(kind=4),allocatable :: nequi(:),list(:),AllEquiList(:,:),TypeofSymmetry(:,:),eqclasses(:)
+  integer(kind=4),allocatable :: nequi(:),list(:)
+  integer(kind=4),allocatable :: AllEquiList(:,:),TypeofSymmetry(:,:),eqclasses(:)
   integer(kind=4),allocatable :: N_plus(:),N_minus(:)
   integer(kind=4),allocatable :: Indof2ndPhonon_plus(:),Indof3rdPhonon_plus(:)
   integer(kind=4),allocatable :: Indof2ndPhonon_minus(:),Indof3rdPhonon_minus(:)
@@ -419,6 +420,10 @@ program ShengBTE
                 Ntotal_plus,Ntotal_minus,Indof2ndPhonon_plus,Indof3rdPhonon_plus,&
                 Indof2ndPhonon_minus,Indof3rdPhonon_minus,energy,velocity,&
                 Gamma_plus,Gamma_minus,tau_zero,F_n)
+           ! Correct F_n to prevent it drifting away from the symmetry of the system.
+           do ll=1,nptk
+              F_n(:,ll,:)=transpose(matmul(symmetrizers(:,:,ll),transpose(F_n(:,ll,:))))
+           end do
            call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
            do ll=1,nbands
               call symmetrize_tensor(ThConductivity(ll,:,:))

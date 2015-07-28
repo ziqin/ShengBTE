@@ -38,8 +38,8 @@ contains
 
     real(kind=8),allocatable :: omega_reduce(:,:),velocity_reduce(:,:,:)
     complex(kind=8),allocatable :: eigenvect_reduce(:,:,:)
-    real(kind=8) :: kspace(nptk,3),newvelocity(nbands,3)
-    integer(kind=4) :: indexK,ii,jj,kk,ID_equi(nsymm,nptk)
+    real(kind=8) :: kspace(nptk,3)
+    integer(kind=4) :: indexK,ii,jj,kk
     character(len=1) :: aux
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
@@ -78,21 +78,9 @@ contains
     deallocate(omega_reduce,velocity_reduce,eigenvect_reduce)
     ! Make sure that group velocities have the right symmetry at each q point.
     ! This solves the problem of undefined components for degenerate modes.
-    call symmetry_map_orig(ID_equi)
     do ii=1,nptk
-       newvelocity=0.
-       kk=0
-       do jj=1,nsymm
-          if(ID_equi(jj,ii).eq.ii) then
-             newvelocity=newvelocity+transpose(&
-                  matmul(crotations_orig(:,:,jj),&
-             transpose(velocity(ii,:,:))))
-             kk=kk+1
-          end if
-       end do
-       if(kk.gt.1) then
-          velocity(ii,:,:)=newvelocity/kk
-       end if
+       velocity(ii,:,:)=transpose(&
+            matmul(symmetrizers(:,:,ii),transpose(velocity(ii,:,:))))
     end do
     ! Make sure that acoustic frequencies and group velocities at Gamma
     ! are exactly zero.
@@ -132,6 +120,7 @@ contains
     real(kind=8) :: rcell(3),r(3),rl(3),rr(3,27),qr(27)
     complex(kind=8) :: ztmp,star
 
+    real(kind=8), allocatable :: shortest(:,:)
     real(kind=8), allocatable :: omega2(:),rwork(:)
     complex(kind=8), allocatable :: work(:)
     integer(kind=4) :: nwork=1
@@ -163,6 +152,27 @@ contains
     allocate(ddyn_total(nbands,nbands,3))
     allocate(ddyn_nac(nbands,nbands,3))
     allocate(work(nwork))
+    allocate(shortest(3,nk))
+
+    ! Use the 1st BZ image of each q point to improve the behavior of
+    ! the non-analytic correction.
+    do ik=1,nk
+       shortest(:,ik)=kpoints(ik,:)
+       tmp1=dnrm2(3,shortest(:,ik),1)
+       do ix1=-2,2
+          do iy1=-2,2
+             do iz1=-2,2
+                r=kpoints(ik,:)+ix1*rlattvec(:,1)+iy1*rlattvec(:,2)+&
+                     iz1*rlattvec(:,3)
+                tmp2=dnrm2(3,r,1)
+                if(tmp2.lt.tmp1) then
+                   tmp1=tmp2
+                   shortest(:,ik)=r
+                end if
+             end do
+          end do
+       end do
+    end do
 
     do ik=1,nk
        dyn_total=0.
@@ -173,14 +183,14 @@ contains
        ! If the nonanalytic flag is set to TRUE, add the electrostatic
        ! correction. No correction is applied exactly at \Gamma in
        ! order not to rely on guesses about directions.
-       if(nonanalytic.and..not.all(kpoints(ik,:).eq.0.)) then
-          tmp3=dot_product(kpoints(ik,:),matmul(epsilon,kpoints(ik,:)))
+       if(nonanalytic.and..not.all(shortest(:,ik).eq.0.)) then
+          tmp3=dot_product(shortest(:,ik),matmul(epsilon,shortest(:,ik)))
           do iatom1=1,natoms
              do iatom2=1,natoms
                 do i=1,3
                    do j=1,3
-                      tmp1=dot_product(kpoints(ik,:),born(:,i,iatom1))
-                      tmp2=dot_product(kpoints(ik,:),born(:,j,iatom2))
+                      tmp1=dot_product(shortest(:,ik),born(:,i,iatom1))
+                      tmp2=dot_product(shortest(:,ik),born(:,j,iatom2))
                       dyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j)=tmp1*tmp2/&
                            mm(iatom1,iatom2)
                       ! The derivatives of the nonanalytic correction
@@ -189,7 +199,7 @@ contains
                       do ip=1,3
                          ddyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j,ip)=&
                               tmp1*born(ip,j,iatom2)+tmp2*born(ip,i,iatom1)-&
-                              2.*tmp1*tmp2*dot_product(epsilon(ip,:),kpoints(ik,:))/tmp3
+                              2.*tmp1*tmp2*dot_product(epsilon(ip,:),shortest(:,ik))/tmp3
                       end do
                       ddyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j,:)=&
                            ddyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j,:)/&
@@ -309,7 +319,7 @@ contains
        end do
     end do
     deallocate(mm,omega2,rwork,fc_short,fc_diel,fc_total,&
-         dyn_total,dyn_nac,ddyn_total,ddyn_nac,work)
+         dyn_total,dyn_nac,ddyn_total,ddyn_nac,work,shortest)
   end subroutine phonon_phonopy
 
   ! Adapted from the code of Quantum Espresso (

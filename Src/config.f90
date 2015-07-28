@@ -51,6 +51,7 @@ module config
   real(kind=8),allocatable :: crotations(:,:,:),qrotations(:,:,:)
   real(kind=8),allocatable :: crotations_orig(:,:,:)
   real(kind=8),allocatable :: qrotations_orig(:,:,:)
+  real(kind=8),allocatable :: symmetrizers(:,:,:)
   character(len=10) :: international
 
   ! MPI variables, assigned in ShengBTE.f90.
@@ -214,7 +215,7 @@ contains
          qrotations(3,3,nsymm_rot))
     allocate(rotations_orig(3,3,nsymm),&
          crotations_orig(3,3,nsymm),&
-         qrotations_orig(3,3,nsymm))
+         qrotations_orig(3,3,nsymm),symmetrizers(3,3,nptk))
     call get_operations(lattvec,natoms,types,positions,nsymm,&
          rotations_orig,translations,international)
     rotations(:,:,1:nsymm)=rotations_orig
@@ -286,13 +287,29 @@ contains
        call move_alloc(crtmp,crotations)
        call move_alloc(qrtmp,qrotations)
     end if
+    ! Create the "symmetrizers", linear operators that extract the
+    ! component of a vector compatible with the symmetries at each q point.
+    symmetrizers=0
+    do ii=1,nptk
+       kk=0
+       do jj=1,nsymm
+          if(ID_equi(jj,ii).eq.ii) then
+             symmetrizers(:,:,ii)=symmetrizers(:,:,ii)+&
+                  crotations_orig(:,:,jj)
+             kk=kk+1
+          end if
+       end do
+       if(kk.gt.1) then
+          symmetrizers(:,:,ii)=symmetrizers(:,:,ii)/kk
+       end if
+    end do
     deallocate(ID_Equi,valid)
   end subroutine read_config
 
   ! Free the memory used by all config structures.
   subroutine free_config()
     deallocate(elements,types,positions,masses,gfactors,born,cartesian,&
-         rotations,crotations,qrotations)
+         rotations,crotations,qrotations,symmetrizers)
     if(nanowires) then
        deallocate(orientations,uorientations)
     end if
@@ -414,4 +431,23 @@ contains
 
     base_sigma=sqrt(base_sigma/6.)
   end function base_sigma
+
+  
+  ! Force a real 3x3 Cartesian tensor to fulfill all the symmetries.
+  subroutine symmetrize_tensor(tensor)
+    implicit none
+
+    real(kind=8),intent(inout) :: tensor(3,3)
+
+    integer(kind=4) :: isym
+    real(kind=8) :: tmp(3,3)
+
+    tmp = 0.
+    do isym=1,nsymm_rot
+       tmp = tmp + matmul(crotations(:,:,isym),&
+            matmul(tensor,transpose(crotations(:,:,isym))))
+    end do
+
+    tensor=tmp/nsymm_rot
+  end subroutine symmetrize_tensor
 end module config

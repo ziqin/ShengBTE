@@ -116,22 +116,4 @@ contains
     end do
     results=1e21*hbar**2*results/(kB*T*T*V*nptk)
   end subroutine CumulativeTConduct
-
-  ! Force a real 3x3 Cartesian tensor to fulfill all the symmetries.
-  subroutine symmetrize_tensor(tensor)
-    implicit none
-
-    real(kind=8),intent(inout) :: tensor(3,3)
-
-    integer(kind=4) :: isym
-    real(kind=8) :: tmp(3,3)
-
-    tmp = 0.
-    do isym=1,nsymm_rot
-       tmp = tmp + matmul(crotations(:,:,isym),&
-            matmul(tensor,transpose(crotations(:,:,isym))))
-    end do
-
-    tensor=tmp/nsymm_rot
-  end subroutine symmetrize_tensor
 end module conductivity

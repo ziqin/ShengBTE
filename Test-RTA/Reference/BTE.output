@@ -12,18 +12,6 @@
  Info: spectrum calculation finished
  Info: Ntotal_plus =      467370
  Info: Ntotal_minus =      524354
- Info: Iteration           1
- Info:Relative change=   2.3383351426296016E-002
- Info: Iteration           2
- Info:Relative change=   1.3763861747698187E-002
- Info: Iteration           3
- Info:Relative change=   1.3546702767543131E-003
- Info: Iteration           4
- Info:Relative change=   2.1250172074442804E-004
- Info: Iteration           5
- Info:Relative change=   3.3616408687244770E-005
- Info: Iteration           6
- Info:Relative change=   5.6187737166221392E-006
 Info: nanowires with orientation 1: 1 0 0
 Info: nanowires with orientation 2: 1 1 0
 Info: nanowires with orientation 3: 1 1 1
