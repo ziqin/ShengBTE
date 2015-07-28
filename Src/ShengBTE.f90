@@ -396,6 +396,9 @@ program ShengBTE
      open(2002,file="BTE.kappa_tensor",status="replace")
      open(2003,file="BTE.kappa_scalar",status="replace")
      call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
+     do ll=1,nbands
+        call symmetrize_tensor(ThConductivity(ll,:,:))
+     end do
      write(aux,"(I0)") 9*Nbands
      write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") 0,ThConductivity
      write(2002,"(I9,9E20.10,E20.10)") 0,sum(ThConductivity,dim=1)
@@ -417,6 +420,9 @@ program ShengBTE
                 Indof2ndPhonon_minus,Indof3rdPhonon_minus,energy,velocity,&
                 Gamma_plus,Gamma_minus,tau_zero,F_n)
            call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
+           do ll=1,nbands
+              call symmetrize_tensor(ThConductivity(ll,:,:))
+           end do
            write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") ii,ThConductivity
            write(2002,"(I9,9E20.10)") ii,sum(ThConductivity,dim=1)
            write(2003,"(I9,E20.10)") ii,&
@@ -501,6 +507,11 @@ program ShengBTE
      allocate(ticks(nticks),cumulative_kappa(nbands,3,3,nticks))
      ! Cumulative thermal conductivity.
      call CumulativeTConduct(energy,velocity,F_n,ticks,cumulative_kappa)
+     do ii=1,nticks
+        do ll=1,nbands
+           call symmetrize_tensor(cumulative_kappa(ll,:,:,ii))
+        end do
+     end do
      write(aux,"(I0)") 9*nbands+1
      open(2001,file="BTE.cumulative_kappa",status="replace")
      open(2002,file="BTE.cumulative_kappa_tensor",status="replace")

@@ -1,0 +1,25 @@
+ Info: symmetry group F-43m detected
+ Info:           24  symmetry operations
+ Info: Ntot =        1728
+ Info: Nlist =          72
+ Info: about to obtain the spectrum
+ Info: expecting Quantum Espresso 2nd-order format
+ Info: about to set the acoustic frequencies at Gamma to zero
+ Info: original values:
+ Info: omega(1,1) =  -1.0590381266000538E-006 rad/ps
+ Info: omega(1,2) =  -4.2769985128429717E-007 rad/ps
+ Info: omega(1,3) =   6.4692638264194974E-007 rad/ps
+ Info: spectrum calculation finished
+ Info: Ntotal_plus =      744806
+ Info: Ntotal_minus =      889888
+ Info: Iteration           1
+ Info:Relative change=   5.2884974964357859E-002
+ Info: Iteration           2
+ Info:Relative change=   1.4936902437505711E-002
+ Info: Iteration           3
+ Info:Relative change=   6.9182861437701109E-004
+ Info: Iteration           4
+ Info:Relative change=   7.1749191170849489E-005
+ Info: Iteration           5
+ Info:Relative change=   5.6599680745926986E-006
+ Info: normal exit
