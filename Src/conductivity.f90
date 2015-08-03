@@ -116,5 +116,4 @@ contains
     end do
     results=1e21*hbar**2*results/(kB*T*T*V*nptk)
   end subroutine CumulativeTConduct
-
 end module conductivity
