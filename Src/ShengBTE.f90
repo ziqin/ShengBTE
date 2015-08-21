@@ -36,6 +36,7 @@ program ShengBTE
 
   real(kind=8) :: kappa_sg(3,3),kappa_old(3,3),relchange
   integer(kind=4) :: i,j,ii,jj,kk,ll,mm,nn
+  integer(kind=4) :: Tcounter
   real(kind=8),allocatable :: energy(:,:),q0(:,:),velocity(:,:,:),velocity_z(:,:)
   complex(kind=8),allocatable :: eigenvect(:,:,:)
 
@@ -331,14 +332,20 @@ program ShengBTE
   ! When the iterative solution to the full linearized BTE is not
   ! requested (i.e., when the relaxation-time approximation is
   ! enough) we use optimized routines with a much smaller memory footprint.
+  open(303,file="KappaTensorVsT_RTA")
   if(convergence) then
+  open(403,file="KappaTensorVsT_CONV")
      allocate(Indof2ndPhonon_plus(Ntotal_plus))
      allocate(Indof3rdPhonon_plus(Ntotal_plus))
      allocate(Indof2ndPhonon_minus(Ntotal_minus))
      allocate(Indof3rdPhonon_minus(Ntotal_minus))
      allocate(Gamma_plus(Ntotal_plus))
      allocate(Gamma_minus(Ntotal_minus))
-
+  endif
+  do Tcounter=1,NINT((T_max-T_min)/T_step)+1
+     T=T_min+(Tcounter-1)*T_step
+  if (myid.eq.0) print*, 'Temperature=', T
+  if(convergence) then
      call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
           Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
@@ -405,6 +412,7 @@ program ShengBTE
      write(2002,"(I9,9E20.10,E20.10)") 0,sum(ThConductivity,dim=1)
      write(2003,"(I9,E20.10,E20.10)") 0,&
           sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
+     write(303,"(F7.1,9E14.5)") T,sum(ThConductivity,dim=1)
 
      open(2004,file="BTE.kappa_mode",status="replace")
      do ll = 1,nptk
@@ -438,6 +446,7 @@ program ShengBTE
            write(*,*) "Info:","Relative change","=",relchange
            if(relchange.lt.eps)exit
         end do
+        write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
 
         open(2004,file="BTE.kappa_mode",status="replace")       ! output the converged values
         do ll = 1,nptk
@@ -598,6 +607,8 @@ program ShengBTE
         end if
      end do
   end if
+   ENDDO ! Tcounter
+
 
   if(myid.eq.0)write(*,*) "Info: normal exit"
 

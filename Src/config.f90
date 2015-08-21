@@ -36,7 +36,9 @@ module config
        epsilon,born,scell,orientations
   integer(kind=4) :: maxiter,nticks
   real(kind=8) :: T,scalebroad,rmin,rmax,dr,eps
-  namelist /parameters/ T,scalebroad,rmin,rmax,dr,maxiter,nticks,eps
+  real(kind=8) :: T_min,T_max,T_step
+  namelist /parameters/ T,scalebroad,rmin,rmax,dr,maxiter,nticks,eps,&
+           T_min,T_max,T_step
   logical :: nonanalytic,convergence,isotopes,autoisotopes,nanowires,onlyharmonic,espresso
   namelist /flags/ nonanalytic,convergence,isotopes,autoisotopes,&
        nanowires,onlyharmonic,espresso
@@ -129,7 +131,8 @@ contains
           call MPI_FINALIZE(ierr)
        end if
     end do
-    T=-1.
+    T=0
+    T_min=0
     scalebroad=1.0
     rmin=5.0
     rmax=505.0
@@ -138,10 +141,14 @@ contains
     nticks=100
     eps=1e-5
     read(1,nml=parameters)
-    if(T.le.0.) then
+    if ((T.le.0.).and.(T_min.le.0)) then
        if(myid.eq.0)write(error_unit,*) "Error: T must be >0 K"
        call MPI_BARRIER(MPI_COMM_WORLD,ierr)
        call MPI_FINALIZE(ierr)
+    elseif (T.gt.0) then 
+    T_min=T
+    T_max=T
+    T_step=T
     end if
     if(rmin.le.0.or.rmax.le.rmin.or.dr.le.0) then
        if(myid.eq.0)write(error_unit,*) "Error: rmin and dr must be >0, and rmax must be > rmin"
