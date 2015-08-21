@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -28,20 +28,19 @@ module phonon_routines
 contains
 
   ! Create the q-point grid and compute all relevant properties.
-  subroutine eigenDM(omega,eigenvect,velocity,NList,Nequi,List,AllEquilist,TypeofSymmetry)
+  subroutine eigenDM(omega,eigenvect,velocity)
     implicit none
 
     include "mpif.h"
 
     real(kind=8),intent(out) :: omega(nptk,nbands),velocity(nptk,nbands,3)
     complex(kind=8),intent(out) :: eigenvect(nptk,Nbands,Nbands)
-    integer(kind=4),intent(in) :: NList,Nequi(nptk),List(nptk)
-    integer(kind=4),intent(in) :: AllEquiList(Nsymm,nptk),TypeofSymmetry(Nsymm,nptk)
 
     real(kind=8),allocatable :: omega_reduce(:,:),velocity_reduce(:,:,:)
     complex(kind=8),allocatable :: eigenvect_reduce(:,:,:)
     real(kind=8) :: kspace(nptk,3)
     integer(kind=4) :: indexK,ii,jj,kk
+    character(len=1) :: aux
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
        do jj=1,Ngrid(2)     ! rlattvec(:,2) direction
@@ -77,17 +76,24 @@ contains
     call MPI_ALLREDUCE(eigenvect_reduce,eigenvect,nptk*nbands*nbands,&
          MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,kk)
     deallocate(omega_reduce,velocity_reduce,eigenvect_reduce)
-    ! To better preserve symmetries, we make sure that group velocities are
-    ! equivalent q points are related through rotations.
-    do ii=1,Nlist
-       do jj=1,Nequi(ii)
-          omega(AllEquilist(jj,ii),:)=omega(list(ii),:)
-          do kk=1,Nbands
-             velocity(AllEquilist(jj,ii),kk,:)=&
-                  matmul(crotations(:,:,TypeofSymmetry(jj,ii)),velocity(list(ii),kk,:))
-          end do
-       end do
+    ! Make sure that group velocities have the right symmetry at each q point.
+    ! This solves the problem of undefined components for degenerate modes.
+    do ii=1,nptk
+       velocity(ii,:,:)=transpose(&
+            matmul(symmetrizers(:,:,ii),transpose(velocity(ii,:,:))))
     end do
+    ! Make sure that acoustic frequencies and group velocities at Gamma
+    ! are exactly zero.
+    if(myid.eq.0) then
+       write(*,*) "Info: about to set the acoustic frequencies at Gamma to zero"
+       write(*,*) "Info: original values:"
+       do ii=1,3
+          write(aux,"(I1)") ii
+          write(*,*) "Info: omega(1,"//aux//") =",omega(1,ii),"rad/ps"
+       end do
+    end if
+    omega(1,1:3)=0.d0
+    velocity(1,1:3,:)=0.
   end subroutine eigenDM
 
   ! Compute phonon dispersions, Phonopy style.
@@ -114,6 +120,7 @@ contains
     real(kind=8) :: rcell(3),r(3),rl(3),rr(3,27),qr(27)
     complex(kind=8) :: ztmp,star
 
+    real(kind=8), allocatable :: shortest(:,:)
     real(kind=8), allocatable :: omega2(:),rwork(:)
     complex(kind=8), allocatable :: work(:)
     integer(kind=4) :: nwork=1
@@ -145,6 +152,27 @@ contains
     allocate(ddyn_total(nbands,nbands,3))
     allocate(ddyn_nac(nbands,nbands,3))
     allocate(work(nwork))
+    allocate(shortest(3,nk))
+
+    ! Use the 1st BZ image of each q point to improve the behavior of
+    ! the non-analytic correction.
+    do ik=1,nk
+       shortest(:,ik)=kpoints(ik,:)
+       tmp1=dnrm2(3,shortest(:,ik),1)
+       do ix1=-2,2
+          do iy1=-2,2
+             do iz1=-2,2
+                r=kpoints(ik,:)+ix1*rlattvec(:,1)+iy1*rlattvec(:,2)+&
+                     iz1*rlattvec(:,3)
+                tmp2=dnrm2(3,r,1)
+                if(tmp2.lt.tmp1) then
+                   tmp1=tmp2
+                   shortest(:,ik)=r
+                end if
+             end do
+          end do
+       end do
+    end do
 
     do ik=1,nk
        dyn_total=0.
@@ -155,14 +183,14 @@ contains
        ! If the nonanalytic flag is set to TRUE, add the electrostatic
        ! correction. No correction is applied exactly at \Gamma in
        ! order not to rely on guesses about directions.
-       if(nonanalytic.and..not.all(kpoints(ik,:).eq.0.)) then
-          tmp3=dot_product(kpoints(ik,:),matmul(epsilon,kpoints(ik,:)))
+       if(nonanalytic.and..not.all(shortest(:,ik).eq.0.)) then
+          tmp3=dot_product(shortest(:,ik),matmul(epsilon,shortest(:,ik)))
           do iatom1=1,natoms
              do iatom2=1,natoms
                 do i=1,3
                    do j=1,3
-                      tmp1=dot_product(kpoints(ik,:),born(:,i,iatom1))
-                      tmp2=dot_product(kpoints(ik,:),born(:,j,iatom2))
+                      tmp1=dot_product(shortest(:,ik),born(:,i,iatom1))
+                      tmp2=dot_product(shortest(:,ik),born(:,j,iatom2))
                       dyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j)=tmp1*tmp2/&
                            mm(iatom1,iatom2)
                       ! The derivatives of the nonanalytic correction
@@ -171,7 +199,7 @@ contains
                       do ip=1,3
                          ddyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j,ip)=&
                               tmp1*born(ip,j,iatom2)+tmp2*born(ip,i,iatom1)-&
-                              2.*tmp1*tmp2*dot_product(epsilon(ip,:),kpoints(ik,:))/tmp3
+                              2.*tmp1*tmp2*dot_product(epsilon(ip,:),shortest(:,ik))/tmp3
                       end do
                       ddyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j,:)=&
                            ddyn_nac(3*(iatom1-1)+i,3*(iatom2-1)+j,:)/&
@@ -291,7 +319,7 @@ contains
        end do
     end do
     deallocate(mm,omega2,rwork,fc_short,fc_diel,fc_total,&
-         dyn_total,dyn_nac,ddyn_total,ddyn_nac,work)
+         dyn_total,dyn_nac,ddyn_total,ddyn_nac,work,shortest)
   end subroutine phonon_phonopy
 
   ! Adapted from the code of Quantum Espresso (

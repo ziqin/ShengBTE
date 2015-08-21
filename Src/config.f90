@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -45,9 +45,13 @@ module config
   real(kind=8) :: cgrid,V,rV,rlattvec(3,3),slattvec(3,3)
   real(kind=8),allocatable :: cartesian(:,:),uorientations(:,:)
 
-  integer(kind=4) :: nsymm
+  integer(kind=4) :: nsymm,nsymm_rot
   integer(kind=4),allocatable :: rotations(:,:,:)
+  integer(kind=4),allocatable :: rotations_orig(:,:,:)
   real(kind=8),allocatable :: crotations(:,:,:),qrotations(:,:,:)
+  real(kind=8),allocatable :: crotations_orig(:,:,:)
+  real(kind=8),allocatable :: qrotations_orig(:,:,:)
+  real(kind=8),allocatable :: symmetrizers(:,:,:)
   character(len=10) :: international
 
   ! MPI variables, assigned in ShengBTE.f90.
@@ -203,32 +207,59 @@ contains
 
     ! Find out the symmetries of the system.
     nsymm=get_num_operations(lattvec,natoms,types,positions)
-    allocate(translations(3,nsymm),rotations(3,3,nsymm),&
-         ctranslations(3,nsymm),crotations(3,3,nsymm),qrotations(3,3,nsymm))
+    ! We need do double that number to take time reversal symetry into
+    ! account.
+    nsymm_rot=2*nsymm
+    allocate(translations(3,nsymm),rotations(3,3,nsymm_rot),&
+         ctranslations(3,nsymm),crotations(3,3,nsymm_rot),&
+         qrotations(3,3,nsymm_rot))
+    allocate(rotations_orig(3,3,nsymm),&
+         crotations_orig(3,3,nsymm),&
+         qrotations_orig(3,3,nsymm),symmetrizers(3,3,nptk))
     call get_operations(lattvec,natoms,types,positions,nsymm,&
-         rotations,translations,international)
+         rotations_orig,translations,international)
+    rotations(:,:,1:nsymm)=rotations_orig
     if(myid.eq.0)write(*,*) "Info: symmetry group ",trim(international)," detected"
     if(myid.eq.0)write(*,*) "Info: ",nsymm," symmetry operations"
-    call get_cartesian_operations(lattvec,nsymm,rotations,translations,&
-         crotations,ctranslations)
+    call get_cartesian_operations(lattvec,nsymm,rotations_orig,translations,&
+         crotations_orig,ctranslations)
+    crotations(:,:,1:nsymm)=crotations_orig
     deallocate(translations,ctranslations)
+
     ! Transform the rotation matrices to the reciprocal-space basis.
     do i=1,nsymm
        tmp1=matmul(transpose(lattvec),lattvec)
-       tmp2=transpose(rotations(:,:,i))
+       tmp2=transpose(rotations_orig(:,:,i))
        tmp3=tmp1
        call dgesv(3,3,tmp1,3,P,tmp2,3,info)
-       qrotations(:,:,i)=transpose(matmul(tmp2,tmp3))
+       qrotations_orig(:,:,i)=transpose(matmul(tmp2,tmp3))
     end do
+    qrotations(:,:,1:nsymm)=qrotations_orig
+
+    ! Fill the second half of the rotation matrix list
+    ! using time reversal symmetry.
+    rotations(:,:,nsymm+1:2*nsymm)=-rotations_orig(:,:,1:nsymm)
+    qrotations(:,:,nsymm+1:2*nsymm)=-qrotations_orig(:,:,1:nsymm)
+    crotations(:,:,nsymm+1:2*nsymm)=-crotations_orig(:,:,1:nsymm)
+
     ! Find rotations that are either duplicated or incompatible with
     ! the q-point grid.
-    allocate(ID_Equi(nsymm,nptk),valid(nsymm))
+    allocate(ID_Equi(nsymm_rot,nptk),valid(nsymm_rot))
     valid=.TRUE.
+    call symmetry_map(ID_equi)
+    jj=0
+    do ii=1,nsymm_rot
+       if(valid(ii).and.any(ID_equi(ii,:).eq.-1)) then
+          valid(ii)=.FALSE.
+          jj=jj+1
+       end if
+    end do
+    if(myid.eq.0.and.jj.ne.0)write(*,*) "Info:",jj,"rotations are incompatible with the q-point grid and will be discarded"
     ll=0
-    do ii=2,nsymm
-       do jj=1,ii-1
-          if(.not.valid(jj))cycle
-          if(all(rotations(:,:,ii).eq.rotations(:,:,jj))) then
+    do ii=2,nsymm_rot
+       do i=1,ii-1
+          if(.not.valid(i))cycle
+          if(all(rotations(:,:,ii).eq.rotations(:,:,i))) then
              valid(ii)=.FALSE.
              ll=ll+1
              exit
@@ -236,58 +267,65 @@ contains
        end do
     end do
     if(myid.eq.0.and.ll.ne.0)write(*,*) "Info:",ll,"duplicated rotations will be discarded"
-    call symmetry_map(ID_equi)
-    jj=0
-    do ii=1,nsymm
-       if(valid(ii).and.any(ID_equi(ii,:).eq.-1)) then
-          valid(ii)=.FALSE.
-          jj=jj+1
-       end if
-    end do
-    if(myid.eq.0.and.jj.ne.0)write(*,*) "Info:",jj,"rotations are incompatible with the q-point grid and will be discarded"
     ! Filter out those rotations through a series of move_alloc calls.
     ! Arrays to take into account: rotations,crotations,qrotations.
     if(ll+jj.ne.0) then
-       call move_alloc(rotations,rtmp)
-       call move_alloc(crotations,crtmp)
-       call move_alloc(qrotations,qrtmp)
-       allocate(rotations(3,3,nsymm-ll-jj),crotations(3,3,nsymm-ll-jj),&
-            qrotations(3,3,nsymm-ll-jj))
+       allocate(rtmp(3,3,nsymm_rot-ll-jj))
+       allocate(crtmp(3,3,nsymm_rot-ll-jj))
+       allocate(qrtmp(3,3,nsymm_rot-ll-jj))
        kk=0
-       do ii=1,nsymm
+       do ii=1,nsymm_rot
           if(valid(ii)) then
              kk=kk+1
-             rotations(:,:,kk)=rtmp(:,:,ii)
-             crotations(:,:,kk)=crtmp(:,:,ii)
-             qrotations(:,:,kk)=qrtmp(:,:,ii)
+             rtmp(:,:,kk)=rotations(:,:,ii)
+             crtmp(:,:,kk)=crotations(:,:,ii)
+             qrtmp(:,:,kk)=qrotations(:,:,ii)
           end if
        end do
-       nsymm=nsymm-ll-jj
-       deallocate(rtmp,crtmp,qrtmp)
+       nsymm_rot=nsymm_rot-ll-jj
+       call move_alloc(rtmp,rotations)
+       call move_alloc(crtmp,crotations)
+       call move_alloc(qrtmp,qrotations)
     end if
+    ! Create the "symmetrizers", linear operators that extract the
+    ! component of a vector compatible with the symmetries at each q point.
+    symmetrizers=0
+    do ii=1,nptk
+       kk=0
+       do jj=1,nsymm
+          if(ID_equi(jj,ii).eq.ii) then
+             symmetrizers(:,:,ii)=symmetrizers(:,:,ii)+&
+                  crotations_orig(:,:,jj)
+             kk=kk+1
+          end if
+       end do
+       if(kk.gt.1) then
+          symmetrizers(:,:,ii)=symmetrizers(:,:,ii)/kk
+       end if
+    end do
     deallocate(ID_Equi,valid)
   end subroutine read_config
 
   ! Free the memory used by all config structures.
   subroutine free_config()
     deallocate(elements,types,positions,masses,gfactors,born,cartesian,&
-         rotations,crotations,qrotations)
+         rotations,crotations,qrotations,symmetrizers)
     if(nanowires) then
        deallocate(orientations,uorientations)
     end if
   end subroutine free_config
-  
+
   ! Compute all images of a reciprocal-space point using the
   ! rotational part of the symmetry operations. Everything is
   ! performed in lattice coordinates.
   subroutine symm(r_in,r_out)
     implicit none
     integer(kind=4),intent(in) :: r_in(3)
-    real(kind=8),intent(out) :: r_out(3,nsymm)
+    real(kind=8),intent(out) :: r_out(3,nsymm_rot)
 
     integer(kind=4) :: ii
 
-    do ii=1,nsymm
+    do ii=1,nsymm_rot
        r_out(:,ii)=ngrid*matmul(qrotations(:,:,ii),dble(r_in)/ngrid)
     end do
   end subroutine symm
@@ -295,16 +333,16 @@ contains
   ! Find the equivalences among points.
   subroutine symmetry_map(ID_equi)
     implicit none
-    integer(kind=4),intent(out) :: ID_equi(nsymm,nptk)
+    integer(kind=4),intent(out) :: ID_equi(nsymm_rot,nptk)
 
     integer(kind=4) :: Ind_cell(3,nptk)
     integer(kind=4) :: i,isym,ivec(3)
-    real(kind=8) :: vec(3),vec_symm(3,nsymm),dnrm2
+    real(kind=8) :: vec(3),vec_symm(3,nsymm_rot),dnrm2
 
     call Id2Ind(Ind_cell)
     do i=1,nptk
        call symm(Ind_cell(:,i),vec_symm)
-       do isym=1,Nsymm
+       do isym=1,nsymm_rot
           vec=vec_symm(:,isym)
           ivec=nint(vec)
           if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-2) then
@@ -316,17 +354,54 @@ contains
     end do
   end subroutine symmetry_map
 
+  ! Equivalent to symm, but using qrotations_orig.
+  subroutine symm_orig(r_in,r_out)
+    implicit none
+    integer(kind=4),intent(in) :: r_in(3)
+    real(kind=8),intent(out) :: r_out(3,nsymm)
+
+    integer(kind=4) :: ii
+
+    do ii=1,nsymm
+       r_out(:,ii)=ngrid*matmul(qrotations_orig(:,:,ii),&
+            dble(r_in)/ngrid)
+    end do
+  end subroutine symm_orig
+
+  ! Equivalent to symmetry_map, but using symm_orig.
+  subroutine symmetry_map_orig(ID_equi)
+    implicit none
+    integer(kind=4),intent(out) :: ID_equi(nsymm,nptk)
+
+    integer(kind=4) :: Ind_cell(3,nptk)
+    integer(kind=4) :: i,isym,ivec(3)
+    real(kind=8) :: vec(3),vec_symm(3,nsymm),dnrm2
+
+    call Id2Ind(Ind_cell)
+    do i=1,nptk
+       call symm_orig(Ind_cell(:,i),vec_symm)
+       do isym=1,nsymm
+          vec=vec_symm(:,isym)
+          ivec=nint(vec)
+          if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-2) then
+             ID_equi(isym,i)=-1
+          else
+             ID_equi(isym,i)=Ind2Id(modulo(ivec,ngrid))
+          end if
+       end do
+    end do
+  end subroutine symmetry_map_orig
+
   ! Create a table that can be used to demultiplex cell indices.
   subroutine Id2ind(Ind_cell)
     implicit none
     integer(kind=4),intent(out) :: Ind_cell(3,nptk)
 
-    integer(kind=4) :: ii
+    integer(kind=4) :: ii,tmp1
 
     do ii=1,nptk
-       Ind_cell(3,ii)=int((ii-1)/(Ngrid(1)*Ngrid(2)))
-       Ind_cell(2,ii)=int(modulo(ii-1,Ngrid(1)*Ngrid(2))/Ngrid(1))
-       Ind_cell(1,ii)=modulo(ii-1,Ngrid(1))
+       call divmod(ii-1,Ngrid(1),tmp1,Ind_cell(1,ii))
+       call divmod(tmp1,Ngrid(2),Ind_cell(3,ii),Ind_cell(2,ii))
     end do
   end subroutine Id2ind
 
@@ -356,4 +431,23 @@ contains
 
     base_sigma=sqrt(base_sigma/6.)
   end function base_sigma
+
+  
+  ! Force a real 3x3 Cartesian tensor to fulfill all the symmetries.
+  subroutine symmetrize_tensor(tensor)
+    implicit none
+
+    real(kind=8),intent(inout) :: tensor(3,3)
+
+    integer(kind=4) :: isym
+    real(kind=8) :: tmp(3,3)
+
+    tmp = 0.
+    do isym=1,nsymm_rot
+       tmp = tmp + matmul(crotations(:,:,isym),&
+            matmul(tensor,transpose(crotations(:,:,isym))))
+    end do
+
+    tensor=tmp/nsymm_rot
+  end subroutine symmetrize_tensor
 end module config

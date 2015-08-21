@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ contains
   subroutine ScalingOfTau(Nlist,Nequi,ALLEquiList,velocity_z,&
        velocity,tauzero_wedge,radnw,ffunc)
     implicit none
-    integer(kind=4),intent(in) :: Nlist,Nequi(nptk),ALLEquiList(Nsymm,nptk)
+    integer(kind=4),intent(in) :: Nlist,Nequi(nptk),ALLEquiList(Nsymm_rot,nptk)
     real(kind=8),intent(in) :: velocity(nptk,Nbands,3),velocity_z(nptk,Nbands)
     real(kind=8),intent(in) :: tauzero_wedge(Nbands,Nlist),radnw
     real(kind=8),intent(out) :: ffunc(nptk,Nbands)

@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2013 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2013 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2013 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2013 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -116,5 +116,4 @@ contains
     end do
     results=1e21*hbar**2*results/(kB*T*T*V*nptk)
   end subroutine CumulativeTConduct
-
 end module conductivity
