@@ -47,8 +47,8 @@ contains
              end do
           end do
           fBE=1.d0/(exp(hbar*omega(ii,jj)/Kb/T)-1.D0)
-          ThConductivity(jj,:,:)=ThConductivity(jj,:,:)+fBE*(fBE+1)*omega(ii,jj)*tmp
           ThConductivityMode(ii,jj,:,:)=fBE*(fBE+1)*omega(ii,jj)*tmp
+          ThConductivity(jj,:,:)=ThConductivity(jj,:,:)+ThConductivityMode(ii,jj,:,:)
        end do
     end do
     ThConductivity=1e21*hbar**2*ThConductivity/(kB*T*T*V*nptk)
