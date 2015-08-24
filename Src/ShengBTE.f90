@@ -72,7 +72,8 @@ program ShengBTE
   real(kind=8),allocatable :: kappa_or(:),kappa_wires(:,:),kappa_wires_reduce(:,:)
 
   integer(kind=4) :: iorient,ierr
-  character(len=4) :: aux
+  character(len=4) :: aux,aux2
+  character(len=10) :: path
   character(len=128) :: sorientation
 
   real(kind=8) :: dnrm2
@@ -343,9 +344,17 @@ program ShengBTE
      allocate(Gamma_plus(Ntotal_plus))
      allocate(Gamma_minus(Ntotal_minus))
   endif
-  do Tcounter=1,NINT((T_max-T_min)/T_step)+1
+  do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
      T=T_min+(Tcounter-1)*T_step
+     if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
+     if (T.gt.(T_max+1.d0)) T=T_max 
   if (myid.eq.0) print*, 'Temperature=', T
+  if (myid.eq.0) then
+     write(aux2,"(I0)") NINT(T)
+     path="T"//trim(adjustl(aux2))//"K"
+     call create_directory(trim(adjustl(path))//C_NULL_CHAR)
+     call change_directory(trim(adjustl(path))//C_NULL_CHAR)
+  endif
   if(convergence) then
      call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
@@ -608,6 +617,7 @@ program ShengBTE
         end if
      end do
   end if
+   if (myid.eq.0) call chdir("..")
    ENDDO ! Tcounter
 
 
