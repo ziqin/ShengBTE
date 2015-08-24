@@ -59,7 +59,8 @@ The contents of this file describe the system to be studied and specify a set of
     - `scell` (integer, 3, mandatory): supercell sizes along each crystal axis used for the 2nd-order force constant calculation
     - `orientations` (integer, 3 x `norientations`, mandatory unless `norientations`==0): terns of integer indices defining the crystallographic directions along which to study nanowires
 - `&parameters` namelist:
-    - `T` (real, K, mandatory): temperature to be used in all calculations
+    - `T` (real, K): temperature to be used in the case of single temperature calculation
+    - `T_min`,`T_max`,`T_step` (real, K): the minimum temperature, the maximum temperature and the increment to be used for multiple-temperature calculation. T takes the priority if it is present. 
     - `scalebroad` (real, default=1.0): scale parameter for Gaussian smearing. The default is theoretically guaranteed to work, but significant speedups can sometimes be achieved by reducing it, with negligible loss of precision.
     - `rmin` (real, nm, default=5.0): minimum radius of nanowires whose thermal conductivity will be computed
     - `rmax` (real, nm, default=505.0): maximum radius of nanowires whose thermal conductivity will be computed
@@ -165,3 +166,5 @@ Many files are created during a successful run of `ShengBTE`. They contain not o
 - `BTE.cumulative_kappa_*`: this set of files is analogous to `BTE.kappa*`, except in that their first column specifies a cutoff mean free path for phonons.
 - `BTE.w_boundary`: boundary scattering rate for each irreducible q point and each mode, for a characteristic length L=1 nm and a specularity parameter p=0. Rescale accordingly to obtain boundary scattering rates in ps<sup>-1</sup>.
 - `BTE.w_boundary_full`: boundary scattering rate for each q point and each mode, for a characteristic length L=1 nm and a specularity parameter p=0. Rescale accordingly to obtain boundary scattering rates in ps<sup>-1</sup>.
+- `KappaTensorVsT_RTA`: total thermal conductivity tensor in unit of W/(m K) in the Relaxation Time Approximation (zero-order) as a function of T (1st column). The last line contains converged values, the rest show the convergence process.
+- `KappaTensorVsT_CONV`: total CONVerged thermal conductivity tensor in unit of W/(m K) as a function of T (1st column). The last column gives the number of iterations reaching convergence.
