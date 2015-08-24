@@ -32,6 +32,13 @@ module misc
        integer(c_int16_t), value :: mode
        integer(c_int) :: mkdir
      end function mkdir
+
+     function syschdir(path) bind(c,name="chdir")
+       use iso_c_binding
+       implicit none
+       character(kind=c_char,len=1) :: path(*)
+       integer(c_int) :: syschdir
+     end function syschdir
   end interface
 
 contains
@@ -100,4 +107,17 @@ contains
        result = tmp
     end if
   end subroutine create_directory
+
+  ! Change the working directory
+  subroutine change_directory(path,result)
+    implicit none
+    character(kind=c_char,len=1),intent(in) :: path(*)
+    integer(kind=4),intent(out),optional :: result
+
+    integer(kind=4) :: tmp
+    tmp=int(syschdir(path),4)
+    if (present(result)) then
+       result = tmp
+    end if
+  end subroutine change_directory
 end module misc
