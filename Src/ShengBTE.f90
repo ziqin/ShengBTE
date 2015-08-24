@@ -203,6 +203,32 @@ program ShengBTE
      close(2)
   end if
 
+  ! Compute the normalized boundary scattering rates.
+  allocate(tau_b(Nbands,Nlist))
+  allocate(tau_b2(Nbands,nptk))
+  do ll=1,Nlist
+     do ii=1,Nbands
+        tau_b(ii,ll)=1.d00/dnrm2(3,velocity(List(ll),ii,:),1)
+     end do
+  end do
+  do ll=1,nptk
+     do ii=1,Nbands
+        tau_b2(ii,ll)=1.d00/dnrm2(3,velocity(ll,ii,:),1)
+     end do
+  end do
+  if (myid.eq.0) then
+     write(aux,"(I0)") Nbands
+     open(2,file="BTE.w_boundary",status="replace")
+     do ll = 1,Nlist
+        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b(:,ll)
+     end do
+     close(2)
+     open(2,file="BTE.w_boundary_full",status="replace")
+     do ll = 1,nptk
+        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b2(:,ll)
+     end do
+     close(2)
+  endif
   ! Locally adaptive estimates of the total and projected densities of states.
   allocate(dos(Nbands,Nlist))
   allocate(pdos(Nbands,Nlist,natoms))
@@ -239,9 +265,7 @@ program ShengBTE
   allocate(rate_scatt(Nbands,Nlist))
   allocate(tau_zero(Nbands,Nlist))
   allocate(tau(Nbands,Nlist))
-  allocate(tau_b(Nbands,Nlist))
   allocate(tau2(Nbands,nptk))
-  allocate(tau_b2(Nbands,nptk))
   rate_scatt=0.d0
   allocate(radnw_range(nwires))
   do ii=1,nwires
@@ -393,17 +417,6 @@ program ShengBTE
      end do
   end do
 
-  ! Compute the normalized boundary scattering rates.
-  do ll=1,Nlist
-     do ii=1,Nbands
-        tau_b(ii,ll)=1.d00/dnrm2(3,velocity(List(ll),ii,:),1)
-     end do
-  end do
-  do ll=1,nptk
-     do ii=1,Nbands
-        tau_b2(ii,ll)=1.d00/dnrm2(3,velocity(ll,ii,:),1)
-     end do
-  end do
 
   ! Set up everything to start the iterative process.
   call iteration0(Nlist,Nequi,ALLEquiList,energy,velocity,tau_zero,F_n)
@@ -477,13 +490,10 @@ program ShengBTE
      end do
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_final",status="replace")
-     open(2,file="BTE.w_boundary",status="replace")
      do ll = 1,Nlist
         write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau(:,ll)
-        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b(:,ll)
      end do
      close(1)
-     close(2)
      do ll=1,nptk
         do ii=1,Nbands
            tau2(ii,ll)=dot_product(F_n(ii,ll,:),velocity(ll,ii,:))/&
@@ -492,13 +502,10 @@ program ShengBTE
      end do
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_final_full",status="replace")
-     open(2,file="BTE.w_boundary_full",status="replace")
      do ll = 1,nptk
         write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau2(:,ll)
-        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b2(:,ll)
      end do
      close(1)
-     close(2)
 
      ! If results for nanowires have been requested, obtain a lower bound
      ! for the thermal conductivity along each crystallographic orientation
