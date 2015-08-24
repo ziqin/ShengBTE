@@ -15,7 +15,7 @@ gruneisen.o gruneisen.mod: data.mod config.mod input.mod
 processes.o processes.mod:  data.mod config.mod
 scaling.o scaling.mod: config.mod data.mod
 wedgetc.o wedgetc.mod: symmetry.mod config.mod misc.mod
-ShengBTE.o: config.mod input.mod processes.mod iterations.mod conductivity.mod scaling.mod gruneisen.mod dos_routines.mod phonon_routines.mod wedgetc.mod integrals.mod
+ShengBTE.o: misc.mod config.mod input.mod processes.mod iterations.mod conductivity.mod scaling.mod gruneisen.mod dos_routines.mod phonon_routines.mod wedgetc.mod integrals.mod
 %.o %.mod: %.f90
 	$(MPIFC) $(FFLAGS) -c -o $*.o $<
 	touch $*.mod

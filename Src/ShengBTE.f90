@@ -19,6 +19,7 @@
 
 ! Main program.
 program ShengBTE
+  use misc
   use config
   use input
   use processes
