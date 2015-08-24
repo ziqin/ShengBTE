@@ -624,7 +624,7 @@ program ShengBTE
         end if
      end do
   end if
-   if (myid.eq.0) call chdir("..")
+   if (myid.eq.0) call change_directory("..")
    ENDDO ! Tcounter
 
 
