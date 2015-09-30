@@ -559,6 +559,23 @@ program ShengBTE
      close(2002)
      close(2003)
      deallocate(ticks,cumulative_kappa)
+
+     ! Cumulative thermal conductivity vs angular frequency.
+     allocate(ticks(nticks),cumulative_kappa(nbands,3,3,nticks))
+     call CumulativeTConductOmega(energy,velocity,F_n,ticks,cumulative_kappa)
+     do ii=1,nticks
+        do ll=1,nbands
+           call symmetrize_tensor(cumulative_kappa(ll,:,:,ii))
+        end do
+     end do
+     write(aux,"(I0)") 9*nbands+1
+     open(2002,file="BTE.cumulative_kappaVsOmega_tensor",status="replace")
+     do ii=1,nticks
+        write(2002,"(10E20.10)") ticks(ii),&
+             sum(cumulative_kappa(:,:,:,ii),dim=1)
+     end do
+     close(2002)
+     deallocate(ticks,cumulative_kappa)
   end if
 
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)

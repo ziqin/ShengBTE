@@ -116,4 +116,53 @@ contains
     end do
     results=1e21*hbar**2*results/(kB*T*T*V*nptk)
   end subroutine CumulativeTConduct
+
+  ! "Cumulative thermal conductivity vs angular frequency": value of kappa obtained when
+  ! only frequencies below a threshold are considered.
+  ! ticks is a list of the thresholds to be employed.
+  subroutine CumulativeTConductOmega(omega,velocity,F_n,ticks,results)
+    implicit none
+
+    real(kind=8),intent(in) :: omega(nptk,Nbands),velocity(nptk,Nbands,3),F_n(Nbands,nptk,3)
+    real(kind=8),intent(out) :: ticks(nticks),results(Nbands,3,3,Nticks)
+
+    real(kind=8) :: fBE,tmp(3,3),lambda
+    integer(kind=4) :: ii,jj,kk,dir1,dir2
+
+    REAL(kind=8)  EMIN,EMAX
+
+    EMIN=1.d10
+    EMAX=-1.d10
+    DO ii=1,NPTK
+    DO jj=1,Nbands
+       emin = min(emin, omega(ii,jj))
+       emax = max(emax, omega(ii,jj))
+    ENDDO
+    ENDDO
+    emax=emax*1.1d0
+
+    do ii=1,nticks
+       ticks(ii)=emin+(emax-emin)*ii/nticks
+    end do
+
+    results=0.
+    do jj=1,Nbands
+       do ii=2,nptk
+          do dir1=1,3
+             do dir2=1,3
+                tmp(dir1,dir2)=velocity(ii,jj,dir1)*F_n(jj,ii,dir2)
+             end do
+          end do
+          fBE=1.d0/(exp(hbar*omega(ii,jj)/Kb/T)-1.D0)
+          tmp=fBE*(fBE+1)*omega(ii,jj)*tmp
+          lambda=omega(ii,jj)
+          do kk=1,nticks
+             if(ticks(kk).gt.lambda) then
+                results(jj,:,:,kk)=results(jj,:,:,kk)+tmp
+             end if
+          end do
+       end do
+    end do
+    results=1e21*hbar**2*results/(kB*T*T*V*nptk)
+  end subroutine CumulativeTConductOmega
 end module conductivity
