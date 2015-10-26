@@ -82,8 +82,68 @@ contains
   end subroutine refine_sigma
 
   ! Compute the DOS, the projected DOS and the isotopic scattering rates.
-  subroutine calc_dos(omega,velocity,eigenvect,nlist,list,&
-       dos,pdos,rate_scatt_isotope)
+  subroutine calc_dos(omega,velocity,eigenvect,ticks,dos,pdos)
+    implicit none
+
+    real(kind=8),intent(in) :: omega(nptk,nbands)
+    real(kind=8),intent(in) :: velocity(nptk,nbands,3)
+    complex(kind=8),intent(in) :: eigenvect(nptk,nbands,nbands)
+    
+    real(kind=8),intent(out) :: ticks(nticks)
+    real(kind=8),intent(out) :: dos(nticks)
+    real(kind=8),intent(out) :: pdos(nticks,natoms)
+
+    integer(kind=4) :: ii,jj,kk,mm
+    real(kind=8) :: sigma(nptk,nbands),thisomega,thissigma,weight,prod
+    REAL(kind=8)  EMIN,EMAX
+
+    call calc_sigma0(velocity,sigma)
+    call refine_sigma(sigma)
+    dos=0.d0
+    pdos=0.d0
+
+    EMIN=1.d10
+    EMAX=-1.d10
+    DO ii=1,NPTK
+    DO jj=1,Nbands
+       emin = min(emin, omega(ii,jj))
+       emax = max(emax, omega(ii,jj))
+    ENDDO
+    ENDDO
+    emax=emax*1.1d0
+
+    do ii=1,nticks
+       ticks(ii)=emin+(emax-emin)*(ii)/nticks
+    enddo
+    do mm=1,nticks
+          thisomega=ticks(mm)
+          if(thisomega==0.) then
+             cycle
+          end if
+          do ii=1,nptk
+             do jj=1,Nbands
+                thissigma=sigma(ii,jj)
+                weight=exp(-(thisomega-omega(ii,jj))**2/(thissigma**2))&
+                     /thissigma/sqrt(pi)
+                if(abs(thisomega-omega(ii,jj)).lt.2.5*thissigma) then
+                   dos(mm)=dos(mm)+weight
+                   do kk=1,natoms
+                      prod=(abs(dot_product(&
+                           eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)),&
+                           eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)))))
+                      pdos(mm,kk)=pdos(mm,kk)+weight*prod                      
+                   end do
+                end if
+             end do
+          end do
+    end do
+    dos=dos/float(nptk)
+    pdos=pdos/float(nptk)
+  end subroutine calc_dos
+
+  ! Compute the DOS, the projected DOS and the isotopic scattering rates.
+  subroutine calc_isotopescatt(omega,velocity,eigenvect,nlist,list,&
+       rate_scatt_isotope)
     implicit none
 
     real(kind=8),intent(in) :: omega(nptk,nbands)
@@ -92,8 +152,6 @@ contains
     integer(kind=4),intent(in) :: nlist
     integer(kind=4),intent(in) :: list(nptk)
     
-    real(kind=8),intent(out) :: dos(nbands,nlist)
-    real(kind=8),intent(out) :: pdos(nbands,nlist,natoms)
     real(kind=8),intent(out) :: rate_scatt_isotope(nbands,nlist)
 
     integer(kind=4) :: ii,jj,kk,mm,nn
@@ -102,8 +160,6 @@ contains
     call calc_sigma0(velocity,sigma)
     call refine_sigma(sigma)
     
-    dos=0.d0
-    pdos=0.d0
     rate_scatt_isotope=0.d0
 
     do mm=1,Nlist
@@ -118,14 +174,6 @@ contains
                 weight=exp(-(thisomega-omega(ii,jj))**2/(thissigma**2))&
                      /thissigma/sqrt(pi)
                 if(abs(thisomega-omega(ii,jj)).lt.2.5*thissigma) then
-                   dos(nn,mm)=dos(nn,mm)+weight
-                   do kk=1,natoms
-                      prod=(abs(dot_product(&
-                           eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)),&
-                           eigenvect(ii,jj,((kk-1)*3+1):((kk-1)*3+3)))))
-                      pdos(nn,mm,kk)=pdos(nn,mm,kk)+weight*prod                      
-                   end do
-                   if(isotopes) then
                       do kk=1,natoms
                          prod=(abs(dot_product(&
                               eigenvect(list(mm),nn,((kk-1)*3+1):((kk-1)*3+3)),&
@@ -133,18 +181,12 @@ contains
                          rate_scatt_isotope(nn,mm)=rate_scatt_isotope(nn,mm)+&
                               weight*prod*gfactors(types(kk))
                       end do
-                   end if
                 end if
              end do
           end do
-          if(isotopes) then
              rate_scatt_isotope(nn,mm)=rate_scatt_isotope(nn,mm)/&
                   (2.d0*nptk)*pi*thisomega**2
-          end if
        end do
     end do
-    dos=dos/float(nptk)
-    pdos=pdos/float(nptk)
-  end subroutine calc_dos
-
+  end subroutine calc_isotopescatt
 end module dos_routines

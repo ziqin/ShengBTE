@@ -36,7 +36,7 @@ program ShengBTE
   include "mpif.h"
 
   real(kind=8) :: kappa_sg(3,3),kappa_old(3,3),relchange
-  integer(kind=4) :: i,j,ii,jj,kk,ll,mm,nn
+  integer(kind=4) :: i,j,ii,jj,kk,ll,mm
   integer(kind=4) :: Tcounter
   real(kind=8),allocatable :: energy(:,:),q0(:,:),velocity(:,:,:),velocity_z(:,:)
   complex(kind=8),allocatable :: eigenvect(:,:,:)
@@ -45,7 +45,7 @@ program ShengBTE
 
   real(kind=8),allocatable :: rate_scatt(:,:)
   real(kind=8),allocatable :: tau_zero(:,:),tau(:,:),tau_b(:,:),tau2(:,:),tau_b2(:,:)
-  real(kind=8),allocatable :: dos(:,:),pdos(:,:,:),rate_scatt_isotope(:,:)
+  real(kind=8),allocatable :: dos(:),pdos(:,:),rate_scatt_isotope(:,:)
   real(kind=8),allocatable :: F_n(:,:,:),F_n_0(:,:,:),F_n_aux(:,:)
   real(kind=8),allocatable :: ThConductivity(:,:,:)
   real(kind=8),allocatable :: ThConductivityMode(:,:,:,:)
@@ -230,30 +230,31 @@ program ShengBTE
      close(2)
   endif
   ! Locally adaptive estimates of the total and projected densities of states.
-  allocate(dos(Nbands,Nlist))
-  allocate(pdos(Nbands,Nlist,natoms))
-  allocate(rate_scatt_isotope(Nbands,Nlist))
-
-  call calc_dos(energy,velocity,eigenvect,nlist,list,&
-       dos,pdos,rate_scatt_isotope)
-
+  allocate(ticks(nticks))
+  allocate(dos(nticks))
+  allocate(pdos(nticks,natoms))
+  call calc_dos(energy,velocity,eigenvect,ticks,dos,pdos)
   if(myid.eq.0) then
      open(1,file="BTE.dos",status="replace")
-     do mm=1,Nlist
-        do nn=1,Nbands
-           write(1,"(2E25.17)") energy(list(mm),nn),dos(nn,mm)
-        end do
+     do mm=1,nticks
+           write(1,"(2E14.5)") ticks(mm),dos(mm)
      end do
      close(1)
      write(aux,"(I0)") Natoms
      open(1,file="BTE.pdos",status="replace")
-     do mm=1,Nlist
-        do nn=1,Nbands
-           write(1,"(E25.17,"//trim(adjustl(aux))//"E25.17)")&
-                energy(list(mm),nn),pdos(nn,mm,:)
-        end do
+     do mm=1,nticks
+           write(1,"(E14.5,"//trim(adjustl(aux))//"E14.5)")&
+                ticks(mm),pdos(mm,:)
      end do
      close(1)
+  end if
+  deallocate(ticks)
+
+
+  allocate(rate_scatt_isotope(Nbands,Nlist))
+  if (isotopes) call calc_isotopescatt(energy,velocity,eigenvect,nlist,list,rate_scatt_isotope)
+
+  if(myid.eq.0) then
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_isotopic",status="replace")
      do ll=1,Nlist
