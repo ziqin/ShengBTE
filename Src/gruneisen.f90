@@ -73,9 +73,13 @@ contains
                 end do
              end do
           end do
+       if (omega(ik,iband).eq.0) then
+          grun(ik,iband)=0.d0
+       else
+          g(iband)=-unitfactor*g(iband)/6.d00/omega(ik,iband)**2
+          grun(ik,iband)=real(g(iband))
+       endif
        end do
-       g=-unitfactor*g/6.d00/omega(ik,:)**2
-       grun(ik,:)=real(g)
     end do
   end subroutine mode_grun
 
