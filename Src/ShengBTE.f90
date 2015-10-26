@@ -170,12 +170,23 @@ program ShengBTE
      close(1)
   end if
 
-  call kappasg(energy,velocity,kappa_sg)
-  if(myid.eq.0) then
+  do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
+     T=T_min+(Tcounter-1)*T_step
+     if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
+     if (T.gt.(T_max+1.d0)) T=T_max 
+  if (myid.eq.0) print*, 'Temperature=', T
+  if (myid.eq.0) then
+     write(aux2,"(I0)") NINT(T)
+     path="T"//trim(adjustl(aux2))//"K"
+     call create_directory(trim(adjustl(path))//C_NULL_CHAR)
+     call change_directory(trim(adjustl(path))//C_NULL_CHAR)
+     call kappasg(energy,velocity,kappa_sg)
      open(1,file="BTE.kappa_sg",status="replace")
      write(1,"(9E20.10)") kappa_sg
      close(1)
+     call change_directory("..")
   end if
+  enddo
 
   write(aux,"(I0)") 3*Nbands
   if(myid.eq.0) then
@@ -291,36 +302,26 @@ program ShengBTE
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
 
   if(myid.eq.0) then
-     open(1,file="BTE.P3_plus",status="replace")
+     open(1,file="BTE.WP3_plus",status="replace")
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_plus_total(:,ll)
+        do i=1,Nbands
+           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
+        enddo
      end do
      close(1)
-     open(1,file="BTE.P3_minus",status="replace")
+     open(1,file="BTE.WP3_minus",status="replace")
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_minus_total(:,ll)
+        do i=1,Nbands
+           write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
+        enddo
      end do
      close(1)
-     open(1,file="BTE.P3",status="replace")
+     open(1,file="BTE.WP3",status="replace")
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") 2.*(Pspace_plus_total(:,ll)+&
-             Pspace_minus_total(:,ll)/2.)/3.
+        do i=1,Nbands
+           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
+        enddo
      end do
-     close(1)
-     do ii=1,Nlist
-        Pspace_plus_total(:,ii)=Pspace_plus_total(:,ii)*Nequi(ii)
-     end do
-     open(1,file="BTE.P3_plus_total",status="replace")
-     write(1,*) sum(Pspace_plus_total)
-     close(1)
-     do ii=1,Nlist
-        Pspace_minus_total(:,ii)=Pspace_minus_total(:,ii)*Nequi(ii)
-     end do
-     open(1,file="BTE.P3_minus_total",status="replace")
-     write(1,*) sum(Pspace_minus_total)
-     close(1)
-     open(1,file="BTE.P3_total",status="replace")
-     write(1,*) 2.*(sum(Pspace_plus_total)+sum(Pspace_minus_total)/2.)/3.
      close(1)
   end if
 
@@ -377,7 +378,7 @@ program ShengBTE
   if (myid.eq.0) then
      write(aux2,"(I0)") NINT(T)
      path="T"//trim(adjustl(aux2))//"K"
-     call create_directory(trim(adjustl(path))//C_NULL_CHAR)
+!     call create_directory(trim(adjustl(path))//C_NULL_CHAR)
      call change_directory(trim(adjustl(path))//C_NULL_CHAR)
   endif
   if(convergence) then
