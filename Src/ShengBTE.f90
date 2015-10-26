@@ -544,18 +544,18 @@ program ShengBTE
         end do
      end do
      write(aux,"(I0)") 9*nbands+1
-     open(2001,file="BTE.cumulative_kappa",status="replace")
+!     open(2001,file="BTE.cumulative_kappa",status="replace")
      open(2002,file="BTE.cumulative_kappa_tensor",status="replace")
      open(2003,file="BTE.cumulative_kappa_scalar",status="replace")
      do ii=1,nticks
-        write(2001,"("//trim(adjustl(aux))//"E20.10)") ticks(ii),cumulative_kappa(:,:,:,ii)
+!        write(2001,"("//trim(adjustl(aux))//"E20.10)") ticks(ii),cumulative_kappa(:,:,:,ii)
         write(2002,"(10E20.10)") ticks(ii),&
              sum(cumulative_kappa(:,:,:,ii),dim=1)
         write(2003,"(2E20.10)") ticks(ii),&
              sum(sum(cumulative_kappa(:,:,:,ii),dim=1),&
              reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
      end do
-     close(2001)
+!     close(2001)
      close(2002)
      close(2003)
      deallocate(ticks,cumulative_kappa)
