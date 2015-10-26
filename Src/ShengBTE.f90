@@ -437,11 +437,11 @@ program ShengBTE
           sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
      write(303,"(F7.1,9E14.5)") T,sum(ThConductivity,dim=1)
 
-     open(2004,file="BTE.kappa_mode",status="replace")
-     do ll = 1,nptk
-        write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
-     end do
-     close(2004)
+!     open(2004,file="BTE.kappa_mode",status="replace")
+!     do ll = 1,nptk
+!        write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
+!     end do
+!     close(2004)
 
      ! Iterate to convergence if desired.
      if(convergence) then
@@ -471,11 +471,11 @@ program ShengBTE
         end do
         write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
 
-        open(2004,file="BTE.kappa_mode",status="replace")       ! output the converged values
-        do ll = 1,nptk
-           write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
-        end do
-        close(2004)
+!        open(2004,file="BTE.kappa_mode",status="replace")       ! output the converged values
+!        do ll = 1,nptk
+!           write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
+!        end do
+!        close(2004)
      end if
      close(2001)
      close(2002)
