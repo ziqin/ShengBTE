@@ -203,15 +203,15 @@ program ShengBTE
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
      open(1,file="BTE.omega",status="replace")
-     open(2,file="BTE.omega_full",status="replace")
+!     open(2,file="BTE.omega_full",status="replace")
      do ll=1,Nlist
         write(1,"("//trim(adjustl(aux))//"E20.10)") energy(list(ll),:)
      end do
      do ll=1,nptk
-        write(2,"("//trim(adjustl(aux))//"E20.10)") energy(ll,:)
+!        write(2,"("//trim(adjustl(aux))//"E20.10)") energy(ll,:)
      end do
      close(1)
-     close(2)
+!     close(2)
   end if
 
   ! Compute the normalized boundary scattering rates.
@@ -236,13 +236,13 @@ program ShengBTE
      enddo
      end do
      close(2)
-     open(2,file="BTE.w_boundary_full",status="replace")
+!     open(2,file="BTE.w_boundary_full",status="replace")
      do i=1,Nbands
      do ll = 1,nptk
-        write(2,"(2E20.10)") energy(ll,i), 1./tau_b2(i,ll)
+!        write(2,"(2E20.10)") energy(ll,i), 1./tau_b2(i,ll)
      enddo
      end do
-     close(2)
+!     close(2)
   endif
   ! Locally adaptive estimates of the total and projected densities of states.
   allocate(ticks(nticks))
@@ -515,13 +515,13 @@ program ShengBTE
         end do
      end do
      write(aux,"(I0)") Nbands
-     open(1,file="BTE.w_final_full",status="replace")
+!     open(1,file="BTE.w_final_full",status="replace")
      do i=1,Nbands
      do ll = 1,nptk
-        write(1,"(2E20.10)") energy(ll,i), 1./tau2(i,ll)
+!        write(1,"(2E20.10)") energy(ll,i), 1./tau2(i,ll)
      enddo
      end do
-     close(1)
+!     close(1)
 
      ! If results for nanowires have been requested, obtain a lower bound
      ! for the thermal conductivity along each crystallographic orientation
