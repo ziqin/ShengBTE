@@ -230,13 +230,17 @@ program ShengBTE
   if (myid.eq.0) then
      write(aux,"(I0)") Nbands
      open(2,file="BTE.w_boundary",status="replace")
+     do i=1,Nbands
      do ll = 1,Nlist
-        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b(:,ll)
+        write(2,"(2E20.10)") energy(list(ll),i),  1./tau_b(i,ll)
+     enddo
      end do
      close(2)
      open(2,file="BTE.w_boundary_full",status="replace")
+     do i=1,Nbands
      do ll = 1,nptk
-        write(2,"("//trim(adjustl(aux))//"E20.10)") 1./tau_b2(:,ll)
+        write(2,"(2E20.10)") energy(ll,i), 1./tau_b2(i,ll)
+     enddo
      end do
      close(2)
   endif
@@ -268,8 +272,10 @@ program ShengBTE
   if(myid.eq.0) then
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_isotopic",status="replace")
+     do i=1,Nbands
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") rate_scatt_isotope(:,ll)
+        write(1,"(2E20.10)") energy(list(ll),i),rate_scatt_isotope(i,ll)
+     enddo
      end do
      close(1)
   end if
@@ -303,24 +309,24 @@ program ShengBTE
 
   if(myid.eq.0) then
      open(1,file="BTE.WP3_plus",status="replace")
+     do i=1,Nbands
      do ll=1,Nlist
-        do i=1,Nbands
            write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
-        enddo
+     enddo
      end do
      close(1)
      open(1,file="BTE.WP3_minus",status="replace")
+     do i=1,Nbands
      do ll=1,Nlist
-        do i=1,Nbands
            write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
-        enddo
+     enddo
      end do
      close(1)
      open(1,file="BTE.WP3",status="replace")
+     do i=1,Nbands
      do ll=1,Nlist
-        do i=1,Nbands
            write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
-        enddo
+     enddo
      end do
      close(1)
   end if
@@ -394,8 +400,10 @@ program ShengBTE
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
      open(1,file="BTE.w_anharmonic",status="replace")
+     do i=1,Nbands
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") rate_scatt(:,ll)
+           write(1,"(2E20.10)") energy(list(ll),i),rate_scatt(i,ll)
+     enddo
      end do
      close(1)
   end if
@@ -404,8 +412,10 @@ program ShengBTE
   rate_scatt=rate_scatt+rate_scatt_isotope
   if(myid.eq.0) then
      open(1,file="BTE.w",status="replace")
+     do i=1,Nbands
      do ll = 1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") rate_scatt(:,ll)
+        write(1,"(2E20.10)") energy(list(ll),i),rate_scatt(i,ll)
+     enddo
      end do
      close(1)
   end if
@@ -492,8 +502,10 @@ program ShengBTE
      end do
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_final",status="replace")
+     do i=1,Nbands
      do ll = 1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau(:,ll)
+        write(1,"(2E20.10)") energy(list(ll),i),  1./tau(i,ll)
+     enddo
      end do
      close(1)
      do ll=1,nptk
@@ -504,8 +516,10 @@ program ShengBTE
      end do
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_final_full",status="replace")
+     do i=1,Nbands
      do ll = 1,nptk
-        write(1,"("//trim(adjustl(aux))//"E20.10)") 1./tau2(:,ll)
+        write(1,"(2E20.10)") energy(ll,i), 1./tau2(i,ll)
+     enddo
      end do
      close(1)
 
