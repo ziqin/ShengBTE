@@ -191,13 +191,17 @@ program ShengBTE
   write(aux,"(I0)") 3*Nbands
   if(myid.eq.0) then
      open(1,file="BTE.v",status="replace")
+     do ii=1,Nbands
      do ll=1,Nlist
-        write(1,"("//trim(adjustl(aux))//"E20.10)") velocity(list(ll),:,:)
+        write(1,"(3E20.10)") velocity(list(ll),ii,:)
+     end do
      end do
      close(1)
      open(1,file="BTE.v_full",status="replace")
+     do ii=1,Nbands
      do ll=1,nptk
-        write(1,"("//trim(adjustl(aux))//"E20.10)") velocity(ll,:,:)
+        write(1,"(3E20.10)") velocity(ll,ii,:)
+     end do
      end do
   end if
   write(aux,"(I0)") Nbands
