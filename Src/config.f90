@@ -235,11 +235,7 @@ contains
 
     ! Transform the rotation matrices to the reciprocal-space basis.
     do i=1,nsymm
-       tmp1=matmul(transpose(lattvec),lattvec)
-       tmp2=transpose(rotations_orig(:,:,i))
-       tmp3=tmp1
-       call dgesv(3,3,tmp1,3,P,tmp2,3,info)
-       qrotations_orig(:,:,i)=transpose(matmul(tmp2,tmp3))
+       qrotations_orig(:,:,i)=transpose(rotations_orig(:,:,i))
     end do
     qrotations(:,:,1:nsymm)=qrotations_orig
 
@@ -249,11 +245,28 @@ contains
     qrotations(:,:,nsymm+1:2*nsymm)=-qrotations_orig(:,:,1:nsymm)
     crotations(:,:,nsymm+1:2*nsymm)=-crotations_orig(:,:,1:nsymm)
 
-    ! Find rotations that are either duplicated or incompatible with
-    ! the q-point grid.
-    allocate(ID_Equi(nsymm_rot,nptk),valid(nsymm_rot))
-    valid=.TRUE.
+    allocate(ID_Equi(nsymm_rot,nptk))
     call symmetry_map(ID_equi)
+    ! Create the "symmetrizers", linear operators that extract the
+    ! component of a vector compatible with the symmetries at each q point.
+    symmetrizers=0
+    do ii=1,nptk
+       kk=0
+       do jj=1,nsymm_rot
+          if(ID_equi(jj,ii).eq.ii) then
+             symmetrizers(:,:,ii)=symmetrizers(:,:,ii)+&
+                  crotations(:,:,jj)
+             kk=kk+1
+          end if
+       end do
+       if(kk.gt.1) then
+          symmetrizers(:,:,ii)=symmetrizers(:,:,ii)/kk
+       end if
+    end do
+    ! Find rotations that are either duplicated or incompatible with
+    ! the q-point grid.    
+    allocate(valid(nsymm_rot))
+    valid=.TRUE.
     jj=0
     do ii=1,nsymm_rot
        if(valid(ii).and.any(ID_equi(ii,:).eq.-1)) then
@@ -261,7 +274,10 @@ contains
           jj=jj+1
        end if
     end do
-    if(myid.eq.0.and.jj.ne.0)write(*,*) "Info:",jj,"rotations are incompatible with the q-point grid and will be discarded"
+    if(myid.eq.0.and.jj.ne.0) then
+       write(*,*) "Info:",jj,&
+            "rotations are incompatible with the q-point grid and will be discarded"
+    end if
     ll=0
     do ii=2,nsymm_rot
        do i=1,ii-1
@@ -273,7 +289,9 @@ contains
           end if
        end do
     end do
-    if(myid.eq.0.and.ll.ne.0)write(*,*) "Info:",ll,"duplicated rotations will be discarded"
+    if(myid.eq.0.and.ll.ne.0) then
+       write(*,*) "Info:",ll,"duplicated rotations will be discarded"
+    end if
     ! Filter out those rotations through a series of move_alloc calls.
     ! Arrays to take into account: rotations,crotations,qrotations.
     if(ll+jj.ne.0) then
@@ -294,22 +312,6 @@ contains
        call move_alloc(crtmp,crotations)
        call move_alloc(qrtmp,qrotations)
     end if
-    ! Create the "symmetrizers", linear operators that extract the
-    ! component of a vector compatible with the symmetries at each q point.
-    symmetrizers=0
-    do ii=1,nptk
-       kk=0
-       do jj=1,nsymm
-          if(ID_equi(jj,ii).eq.ii) then
-             symmetrizers(:,:,ii)=symmetrizers(:,:,ii)+&
-                  crotations_orig(:,:,jj)
-             kk=kk+1
-          end if
-       end do
-       if(kk.gt.1) then
-          symmetrizers(:,:,ii)=symmetrizers(:,:,ii)/kk
-       end if
-    end do
     deallocate(ID_Equi,valid)
   end subroutine read_config
 
@@ -360,44 +362,6 @@ contains
        end do
     end do
   end subroutine symmetry_map
-
-  ! Equivalent to symm, but using qrotations_orig.
-  subroutine symm_orig(r_in,r_out)
-    implicit none
-    integer(kind=4),intent(in) :: r_in(3)
-    real(kind=8),intent(out) :: r_out(3,nsymm)
-
-    integer(kind=4) :: ii
-
-    do ii=1,nsymm
-       r_out(:,ii)=ngrid*matmul(qrotations_orig(:,:,ii),&
-            dble(r_in)/ngrid)
-    end do
-  end subroutine symm_orig
-
-  ! Equivalent to symmetry_map, but using symm_orig.
-  subroutine symmetry_map_orig(ID_equi)
-    implicit none
-    integer(kind=4),intent(out) :: ID_equi(nsymm,nptk)
-
-    integer(kind=4) :: Ind_cell(3,nptk)
-    integer(kind=4) :: i,isym,ivec(3)
-    real(kind=8) :: vec(3),vec_symm(3,nsymm),dnrm2
-
-    call Id2Ind(Ind_cell)
-    do i=1,nptk
-       call symm_orig(Ind_cell(:,i),vec_symm)
-       do isym=1,nsymm
-          vec=vec_symm(:,isym)
-          ivec=nint(vec)
-          if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-2) then
-             ID_equi(isym,i)=-1
-          else
-             ID_equi(isym,i)=Ind2Id(modulo(ivec,ngrid))
-          end if
-       end do
-    end do
-  end subroutine symmetry_map_orig
 
   ! Create a table that can be used to demultiplex cell indices.
   subroutine Id2ind(Ind_cell)
