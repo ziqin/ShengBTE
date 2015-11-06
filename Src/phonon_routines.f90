@@ -41,7 +41,6 @@ contains
     real(kind=8) :: kspace(nptk,3)
     integer(kind=4) :: indexK,ii,jj,kk
     character(len=1) :: aux
-    logical :: degen
 
     do ii=1,Ngrid(1)        ! rlattvec(:,1) direction
        do jj=1,Ngrid(2)     ! rlattvec(:,2) direction
@@ -77,21 +76,11 @@ contains
     call MPI_ALLREDUCE(eigenvect_reduce,eigenvect,nptk*nbands*nbands,&
          MPI_DOUBLE_COMPLEX,MPI_SUM,MPI_COMM_WORLD,kk)
     deallocate(omega_reduce,velocity_reduce,eigenvect_reduce)
-    ! Make sure that group velocities of degenerate modes
-    ! have the right symmetry at each q point.
+    ! Make sure that group velocities have the right symmetry at each q point.
+    ! This solves the problem of undefined components for degenerate modes.
     do ii=1,nptk
-       do jj=1,nbands-1
-          degen=.false.
-          if(abs(omega(ii,jj)-omega(ii,jj+1)).le.1e-5) then
-             degen=.true.
-             velocity(ii,jj,:)=matmul(symmetrizers(:,:,ii),&
-                  velocity(ii,jj,:))
-          end if
-       end do
-       if(degen) then
-          velocity(ii,nbands,:)=matmul(symmetrizers(:,:,ii),&
-               velocity(ii,nbands,:))
-       end if
+       velocity(ii,:,:)=transpose(&
+            matmul(symmetrizers(:,:,ii),transpose(velocity(ii,:,:))))
     end do
     ! Make sure that acoustic frequencies and group velocities at Gamma
     ! are exactly zero.
@@ -329,8 +318,8 @@ contains
           velocities(ik,i,:)=velocities(ik,i,:)/(2.*omegas(ik,i))
        end do
     end do
-    deallocate(mm,omega2,rwork,fc_short,fc_diel,fc_total,dyn_total,&
-         dyn_nac,ddyn_total,ddyn_nac,work,shortest)
+    deallocate(mm,omega2,rwork,fc_short,fc_diel,fc_total,&
+         dyn_total,dyn_nac,ddyn_total,ddyn_nac,work,shortest)
   end subroutine phonon_phonopy
 
   ! Adapted from the code of Quantum Espresso (
