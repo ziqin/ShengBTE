@@ -250,7 +250,7 @@ contains
     crotations(:,:,nsymm+1:2*nsymm)=-crotations_orig(:,:,1:nsymm)
 
     allocate(ID_Equi(nsymm_rot,nptk))
-    call symmetry_map(ID_equi)
+    call symmetry_map_notransl(ID_equi)
     ! Create the "symmetrizers", linear operators that extract the
     ! component of a vector compatible with the symmetries at each q point.
     symmetrizers=0
@@ -269,6 +269,7 @@ contains
     end do
     ! Find rotations that are either duplicated or incompatible with
     ! the q-point grid.    
+    call symmetry_map(ID_equi)
     allocate(valid(nsymm_rot))
     valid=.TRUE.
     jj=0
@@ -366,6 +367,30 @@ contains
        end do
     end do
   end subroutine symmetry_map
+
+  ! Find the equivalences among points without translational operations.
+  subroutine symmetry_map_notransl(ID_equi)
+    implicit none
+    integer(kind=4),intent(out) :: ID_equi(nsymm_rot,nptk)
+
+    integer(kind=4) :: Ind_cell(3,nptk)
+    integer(kind=4) :: i,isym,ivec(3)
+    real(kind=8) :: vec(3),vec_symm(3,nsymm_rot),dnrm2
+
+    call Id2Ind(Ind_cell)
+    do i=1,nptk
+       call symm(Ind_cell(:,i),vec_symm)
+       do isym=1,nsymm_rot
+          vec=vec_symm(:,isym)
+          ivec=nint(vec)
+          if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-2) then
+             ID_equi(isym,i)=-1
+          else
+             ID_equi(isym,i)=Ind2Id(ivec)
+          end if
+       end do
+    end do
+  end subroutine symmetry_map_notransl
 
   ! Create a table that can be used to demultiplex cell indices.
   subroutine Id2ind(Ind_cell)
