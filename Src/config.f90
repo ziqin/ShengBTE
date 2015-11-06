@@ -235,7 +235,11 @@ contains
 
     ! Transform the rotation matrices to the reciprocal-space basis.
     do i=1,nsymm
-       qrotations_orig(:,:,i)=transpose(rotations_orig(:,:,i))
+       tmp1=matmul(transpose(lattvec),lattvec)
+       tmp2=transpose(rotations_orig(:,:,i))
+       tmp3=tmp1
+       call dgesv(3,3,tmp1,3,P,tmp2,3,info)
+       qrotations_orig(:,:,i)=transpose(matmul(tmp2,tmp3))
     end do
     qrotations(:,:,1:nsymm)=qrotations_orig
 
