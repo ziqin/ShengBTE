@@ -368,7 +368,7 @@ contains
     end do
   end subroutine symmetry_map
 
-  ! Find the equivalences among points without translational operations.
+  ! Find symmetry operations excluding translations that can bring q to itself.
   subroutine symmetry_map_notransl(ID_equi)
     implicit none
     integer(kind=4),intent(out) :: ID_equi(nsymm_rot,nptk)
@@ -383,11 +383,11 @@ contains
        do isym=1,nsymm_rot
           vec=vec_symm(:,isym)
           ivec=nint(vec)
-          if(dnrm2(3,abs(vec-dble(ivec)),1).gt.1e-2) then
-             ID_equi(isym,i)=-1
+          if(dnrm2(3,abs(dble(Ind_cell(:,i))-dble(ivec)),1).le.1e-5) then
+             ID_equi(isym,i)=i
           else
-             ID_equi(isym,i)=Ind2Id(ivec)
-          end if
+             ID_equi(isym,i)=-1
+          endif
        end do
     end do
   end subroutine symmetry_map_notransl
