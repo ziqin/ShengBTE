@@ -383,7 +383,7 @@ contains
        do isym=1,nsymm_rot
           vec=vec_symm(:,isym)
           ivec=nint(vec)
-          if(dnrm2(3,abs(dble(Ind_cell(:,i))-dble(ivec)),1).le.1e-5) then
+          if(dnrm2(3,abs(dble(Ind_cell(:,i))-dble(vec)),1).le.1e-5) then
              ID_equi(isym,i)=i
           else
              ID_equi(isym,i)=-1
