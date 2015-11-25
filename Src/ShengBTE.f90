@@ -73,7 +73,7 @@ program ShengBTE
 
   integer(kind=4) :: iorient,ierr
   character(len=4) :: aux,aux2
-  character(len=10) :: path
+  character(len=1024) :: path
   character(len=128) :: sorientation
 
   real(kind=8) :: dnrm2
@@ -161,61 +161,53 @@ program ShengBTE
   call eigenDM(energy,eigenvect,velocity)
   if(myid.eq.0)write(*,*) "Info: spectrum calculation finished"
 
-  ! Compute the harmonic integrals: lattice specific heat and
-  ! small-grain-limit reduced thermal conductivity. Write out this
-  ! information, as well as the spectrum itself.
-  if(myid.eq.0) then
-     open(1,file="BTE.cv",status="replace")
-     write(1,*) cv(energy)
-     close(1)
-  end if
-
-  do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
+  do Tcounter=1,ceiling((T_max-T_min)/T_step)+1
      T=T_min+(Tcounter-1)*T_step
      if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
      if (T.gt.(T_max+1.d0)) T=T_max 
-  if (myid.eq.0) print*, 'Temperature=', T
-  if (myid.eq.0) then
-     write(aux2,"(I0)") NINT(T)
-     path="T"//trim(adjustl(aux2))//"K"
-     call create_directory(trim(adjustl(path))//C_NULL_CHAR)
-     call change_directory(trim(adjustl(path))//C_NULL_CHAR)
-     call kappasg(energy,velocity,kappa_sg)
-     open(1,file="BTE.kappa_sg",status="replace")
-     write(1,"(9E20.10)") kappa_sg
-     close(1)
-     call change_directory(".."//C_NULL_CHAR)
-  end if
+     if (myid.eq.0) then
+        print *, "Temperature=", T
+        write(aux2,"(I0)") NINT(T)
+        path="T"//trim(adjustl(aux2))//"K"
+        call create_directory(trim(adjustl(path))//C_NULL_CHAR)
+        call change_directory(trim(adjustl(path))//C_NULL_CHAR)
+        ! Compute the harmonic integrals: lattice specific heat and
+        ! small-grain-limit reduced thermal conductivity. Write out this
+        ! information, as well as the spectrum itself.
+        open(1,file="BTE.cv",status="replace")
+        write(1,*) cv(energy)
+        close(1)
+        call kappasg(energy,velocity,kappa_sg)
+        open(1,file="BTE.kappa_sg",status="replace")
+        write(1,"(9E20.10)") kappa_sg
+        close(1)
+        call change_directory(".."//C_NULL_CHAR)
+     end if
   enddo
 
   write(aux,"(I0)") 3*Nbands
   if(myid.eq.0) then
      open(1,file="BTE.v",status="replace")
      do ii=1,Nbands
-     do ll=1,Nlist
-        write(1,"(3E20.10)") velocity(list(ll),ii,:)
-     end do
+        do ll=1,Nlist
+           write(1,"(3E20.10)") velocity(list(ll),ii,:)
+        end do
      end do
      close(1)
      open(1,file="BTE.v_full",status="replace")
      do ii=1,Nbands
-     do ll=1,nptk
-        write(1,"(3E20.10)") velocity(ll,ii,:)
-     end do
+        do ll=1,nptk
+           write(1,"(3E20.10)") velocity(ll,ii,:)
+        end do
      end do
   end if
   write(aux,"(I0)") Nbands
   if(myid.eq.0) then
      open(1,file="BTE.omega",status="replace")
-!     open(2,file="BTE.omega_full",status="replace")
      do ll=1,Nlist
         write(1,"("//trim(adjustl(aux))//"E20.10)") energy(list(ll),:)
      end do
-     do ll=1,nptk
-!        write(2,"("//trim(adjustl(aux))//"E20.10)") energy(ll,:)
-     end do
      close(1)
-!     close(2)
   end if
 
   ! Compute the normalized boundary scattering rates.
@@ -235,18 +227,11 @@ program ShengBTE
      write(aux,"(I0)") Nbands
      open(2,file="BTE.w_boundary",status="replace")
      do i=1,Nbands
-     do ll = 1,Nlist
-        write(2,"(2E20.10)") energy(list(ll),i),  1./tau_b(i,ll)
-     enddo
+        do ll = 1,Nlist
+           write(2,"(2E20.10)") energy(list(ll),i),  1./tau_b(i,ll)
+        enddo
      end do
      close(2)
-!     open(2,file="BTE.w_boundary_full",status="replace")
-     do i=1,Nbands
-     do ll = 1,nptk
-!        write(2,"(2E20.10)") energy(ll,i), 1./tau_b2(i,ll)
-     enddo
-     end do
-!     close(2)
   endif
   ! Locally adaptive estimates of the total and projected densities of states.
   allocate(ticks(nticks))
@@ -256,14 +241,14 @@ program ShengBTE
   if(myid.eq.0) then
      open(1,file="BTE.dos",status="replace")
      do mm=1,nticks
-           write(1,"(2E14.5)") ticks(mm),dos(mm)
+        write(1,"(2E14.5)") ticks(mm),dos(mm)
      end do
      close(1)
      write(aux,"(I0)") Natoms
      open(1,file="BTE.pdos",status="replace")
      do mm=1,nticks
-           write(1,"(E14.5,"//trim(adjustl(aux))//"E14.5)")&
-                ticks(mm),pdos(mm,:)
+        write(1,"(E14.5,"//trim(adjustl(aux))//"E14.5)")&
+             ticks(mm),pdos(mm,:)
      end do
      close(1)
   end if
@@ -277,9 +262,9 @@ program ShengBTE
      write(aux,"(I0)") Nbands
      open(1,file="BTE.w_isotopic",status="replace")
      do i=1,Nbands
-     do ll=1,Nlist
-        write(1,"(2E20.10)") energy(list(ll),i),rate_scatt_isotope(i,ll)
-     enddo
+        do ll=1,Nlist
+           write(1,"(2E20.10)") energy(list(ll),i),rate_scatt_isotope(i,ll)
+        enddo
      end do
      close(1)
   end if
@@ -314,23 +299,23 @@ program ShengBTE
   if(myid.eq.0) then
      open(1,file="BTE.WP3_plus",status="replace")
      do i=1,Nbands
-     do ll=1,Nlist
+        do ll=1,Nlist
            write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
-     enddo
+        enddo
      end do
      close(1)
      open(1,file="BTE.WP3_minus",status="replace")
      do i=1,Nbands
-     do ll=1,Nlist
+        do ll=1,Nlist
            write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
-     enddo
+        enddo
      end do
      close(1)
      open(1,file="BTE.WP3",status="replace")
      do i=1,Nbands
-     do ll=1,Nlist
+        do ll=1,Nlist
            write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
-     enddo
+        enddo
      end do
      close(1)
   end if
@@ -370,9 +355,9 @@ program ShengBTE
   ! When the iterative solution to the full linearized BTE is not
   ! requested (i.e., when the relaxation-time approximation is
   ! enough) we use optimized routines with a much smaller memory footprint.
-  open(303,file="KappaTensorVsT_RTA")
+  open(303,file="BTE.KappaTensorVsT_RTA")
   if(convergence) then
-  open(403,file="KappaTensorVsT_CONV")
+     open(403,file="BTE.KappaTensorVsT_CONV")
      allocate(Indof2ndPhonon_plus(Ntotal_plus))
      allocate(Indof3rdPhonon_plus(Ntotal_plus))
      allocate(Indof2ndPhonon_minus(Ntotal_minus))
@@ -384,163 +369,220 @@ program ShengBTE
      T=T_min+(Tcounter-1)*T_step
      if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
      if (T.gt.(T_max+1.d0)) T=T_max 
-  if (myid.eq.0) print*, 'Temperature=', T
-  if (myid.eq.0) then
-     write(aux2,"(I0)") NINT(T)
-     path="T"//trim(adjustl(aux2))//"K"
-!     call create_directory(trim(adjustl(path))//C_NULL_CHAR)
-     call change_directory(trim(adjustl(path))//C_NULL_CHAR)
-  endif
-  if(convergence) then
-     call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
-          Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
-          Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
-          Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
-  else
-     call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
-          Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt)
-  end if
-
-  write(aux,"(I0)") Nbands
-  if(myid.eq.0) then
-     open(1,file="BTE.w_anharmonic",status="replace")
-     do i=1,Nbands
-     do ll=1,Nlist
-           write(1,"(2E20.10)") energy(list(ll),i),rate_scatt(i,ll)
-     enddo
-     end do
-     close(1)
-  end if
-
-  ! Obtain the total scattering rates in the relaxation time approximation.
-  rate_scatt=rate_scatt+rate_scatt_isotope
-  if(myid.eq.0) then
-     open(1,file="BTE.w",status="replace")
-     do i=1,Nbands
-     do ll = 1,Nlist
-        write(1,"(2E20.10)") energy(list(ll),i),rate_scatt(i,ll)
-     enddo
-     end do
-     close(1)
-  end if
-
-  tau_zero=0.d0
-  do ll = 1,Nlist
-     do i=1,Nbands
-        if(rate_scatt(i,ll).ne.0) then
-           tau_zero(i,ll)=1./rate_scatt(i,ll)
-        end if
-     end do
-  end do
-
-
-  ! Set up everything to start the iterative process.
-  call iteration0(Nlist,Nequi,ALLEquiList,energy,velocity,tau_zero,F_n)
-  F_n_0=F_n
-  if(myid.eq.0) then
-     ! Open all output files.
-     open(2001,file="BTE.kappa",status="replace")
-     open(2002,file="BTE.kappa_tensor",status="replace")
-     open(2003,file="BTE.kappa_scalar",status="replace")
-     call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
-     do ll=1,nbands
-        call symmetrize_tensor(ThConductivity(ll,:,:))
-     end do
-     write(aux,"(I0)") 9*Nbands
-     write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") 0,ThConductivity
-     write(2002,"(I9,9E20.10,E20.10)") 0,sum(ThConductivity,dim=1)
-     write(2003,"(I9,E20.10,E20.10)") 0,&
-          sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
-     write(303,"(F7.1,9E14.5)") T,sum(ThConductivity,dim=1)
-
-!     open(2004,file="BTE.kappa_mode",status="replace")
-!     do ll = 1,nptk
-!        write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
-!     end do
-!     close(2004)
-
-     ! Iterate to convergence if desired.
+     if (myid.eq.0) then
+        print *, "Temperature=", T
+        write(aux2,"(I0)") NINT(T)
+        path="T"//trim(adjustl(aux2))//"K"
+        call change_directory(trim(adjustl(path))//C_NULL_CHAR)
+     endif
      if(convergence) then
-        do ii=1,maxiter
-           kappa_old=sum(ThConductivity,dim=1)
-           call iteration(Nlist,Nequi,ALLEquiList,TypeofSymmetry,N_plus,N_minus,&
-                Ntotal_plus,Ntotal_minus,Indof2ndPhonon_plus,Indof3rdPhonon_plus,&
-                Indof2ndPhonon_minus,Indof3rdPhonon_minus,energy,velocity,&
-                Gamma_plus,Gamma_minus,tau_zero,F_n)
-           ! Correct F_n to prevent it drifting away from the symmetry of the system.
-           do ll=1,nptk
-              F_n(:,ll,:)=transpose(matmul(symmetrizers(:,:,ll),transpose(F_n(:,ll,:))))
-           end do
-           call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
-           do ll=1,nbands
-              call symmetrize_tensor(ThConductivity(ll,:,:))
-           end do
-           write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") ii,ThConductivity
-           write(2002,"(I9,9E20.10)") ii,sum(ThConductivity,dim=1)
-           write(2003,"(I9,E20.10)") ii,&
-                sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
-           relchange=twonorm3x3(sum(ThConductivity,dim=1)-kappa_old)/&
-                twonorm3x3(kappa_old)
-           write(*,*) "Info: Iteration",ii
-           write(*,*) "Info:","Relative change","=",relchange
-           if(relchange.lt.eps)exit
-        end do
-        write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
-
-!        open(2004,file="BTE.kappa_mode",status="replace")       ! output the converged values
-!        do ll = 1,nptk
-!           write(2004,"("//trim(adjustl(aux))//"E20.10)") ThConductivityMode(ll,:,:,:)
-!        end do
-!        close(2004)
+        call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
+             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
+             Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
+             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
+     else
+        call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
+             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt)
      end if
-     close(2001)
-     close(2002)
-     close(2003)
 
-     ! Write out the converged scattering rates.
-     do ll=1,Nlist
-        do ii=1,Nbands
-           tau(ii,ll)=dot_product(F_n(ii,List(ll),:),velocity(List(ll),ii,:))/&
-                (dot_product(velocity(List(ll),ii,:),velocity(List(ll),ii,:))*energy(List(ll),ii))
-        end do
-     end do
      write(aux,"(I0)") Nbands
-     open(1,file="BTE.w_final",status="replace")
-     do i=1,Nbands
+     if(myid.eq.0) then
+        open(1,file="BTE.w_anharmonic",status="replace")
+        do i=1,Nbands
+           do ll=1,Nlist
+              write(1,"(2E20.10)") energy(list(ll),i),rate_scatt(i,ll)
+           enddo
+        end do
+        close(1)
+     end if
+
+     ! Obtain the total scattering rates in the relaxation time approximation.
+     rate_scatt=rate_scatt+rate_scatt_isotope
+     if(myid.eq.0) then
+        open(1,file="BTE.w",status="replace")
+        do i=1,Nbands
+           do ll = 1,Nlist
+              write(1,"(2E20.10)") energy(list(ll),i),rate_scatt(i,ll)
+           enddo
+        end do
+        close(1)
+     end if
+
+     tau_zero=0.d0
      do ll = 1,Nlist
-        write(1,"(2E20.10)") energy(list(ll),i),  1./tau(i,ll)
-     enddo
-     end do
-     close(1)
-     do ll=1,nptk
-        do ii=1,Nbands
-           tau2(ii,ll)=dot_product(F_n(ii,ll,:),velocity(ll,ii,:))/&
-                (dot_product(velocity(ll,ii,:),velocity(ll,ii,:))*energy(ll,ii))
+        do i=1,Nbands
+           if(rate_scatt(i,ll).ne.0) then
+              tau_zero(i,ll)=1./rate_scatt(i,ll)
+           end if
         end do
      end do
-     write(aux,"(I0)") Nbands
-!     open(1,file="BTE.w_final_full",status="replace")
-     do i=1,Nbands
-     do ll = 1,nptk
-!        write(1,"(2E20.10)") energy(ll,i), 1./tau2(i,ll)
-     enddo
-     end do
-!     close(1)
 
-     ! If results for nanowires have been requested, obtain a lower bound
-     ! for the thermal conductivity along each crystallographic orientation
-     ! by using the bulk RTA results.
+
+     ! Set up everything to start the iterative process.
+     call iteration0(Nlist,Nequi,ALLEquiList,energy,velocity,tau_zero,F_n)
+     F_n_0=F_n
+     if(myid.eq.0) then
+        ! Open all output files.
+        open(2001,file="BTE.kappa",status="replace")
+        open(2002,file="BTE.kappa_tensor",status="replace")
+        open(2003,file="BTE.kappa_scalar",status="replace")
+        call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
+        do ll=1,nbands
+           call symmetrize_tensor(ThConductivity(ll,:,:))
+        end do
+        write(aux,"(I0)") 9*Nbands
+        write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") 0,ThConductivity
+        write(2002,"(I9,9E20.10,E20.10)") 0,sum(ThConductivity,dim=1)
+        write(2003,"(I9,E20.10,E20.10)") 0,&
+             sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
+        write(303,"(F7.1,9E14.5)") T,sum(ThConductivity,dim=1)
+
+        ! Iterate to convergence if desired.
+        if(convergence) then
+           do ii=1,maxiter
+              kappa_old=sum(ThConductivity,dim=1)
+              call iteration(Nlist,Nequi,ALLEquiList,TypeofSymmetry,N_plus,N_minus,&
+                   Ntotal_plus,Ntotal_minus,Indof2ndPhonon_plus,Indof3rdPhonon_plus,&
+                   Indof2ndPhonon_minus,Indof3rdPhonon_minus,energy,velocity,&
+                   Gamma_plus,Gamma_minus,tau_zero,F_n)
+              ! Correct F_n to prevent it drifting away from the symmetry of the system.
+              do ll=1,nptk
+                 F_n(:,ll,:)=transpose(matmul(symmetrizers(:,:,ll),transpose(F_n(:,ll,:))))
+              end do
+              call TConduct(energy,velocity,F_n,ThConductivity,ThConductivityMode)
+              do ll=1,nbands
+                 call symmetrize_tensor(ThConductivity(ll,:,:))
+              end do
+              write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") ii,ThConductivity
+              write(2002,"(I9,9E20.10)") ii,sum(ThConductivity,dim=1)
+              write(2003,"(I9,E20.10)") ii,&
+                   sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
+              relchange=twonorm3x3(sum(ThConductivity,dim=1)-kappa_old)/&
+                   twonorm3x3(kappa_old)
+              write(*,*) "Info: Iteration",ii
+              write(*,*) "Info:","Relative change","=",relchange
+              if(relchange.lt.eps)exit
+           end do
+           write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
+
+        end if
+        close(2001)
+        close(2002)
+        close(2003)
+
+        ! Write out the converged scattering rates.
+        do ll=1,Nlist
+           do ii=1,Nbands
+              tau(ii,ll)=dot_product(F_n(ii,List(ll),:),velocity(List(ll),ii,:))/&
+                   (dot_product(velocity(List(ll),ii,:),velocity(List(ll),ii,:))*energy(List(ll),ii))
+           end do
+        end do
+        write(aux,"(I0)") Nbands
+        open(1,file="BTE.w_final",status="replace")
+        do i=1,Nbands
+           do ll = 1,Nlist
+              write(1,"(2E20.10)") energy(list(ll),i),  1./tau(i,ll)
+           enddo
+        end do
+        close(1)
+        do ll=1,nptk
+           do ii=1,Nbands
+              tau2(ii,ll)=dot_product(F_n(ii,ll,:),velocity(ll,ii,:))/&
+                   (dot_product(velocity(ll,ii,:),velocity(ll,ii,:))*energy(ll,ii))
+           end do
+        end do
+        write(aux,"(I0)") Nbands
+
+        ! If results for nanowires have been requested, obtain a lower bound
+        ! for the thermal conductivity along each crystallographic orientation
+        ! by using the bulk RTA results.
+        if(nanowires) then
+           do iorient=1,norientations
+              write(sorientation,"(I128)") iorient
+              open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation))//"_lower",status="replace")
+              do ii=1,nptk
+                 do jj=1,Nbands
+                    v_or(ii,jj)=dot_product(velocity(ii,jj,:),uorientations(:,iorient))
+                    F_or(jj,ii)=dot_product(F_n_0(jj,ii,:),uorientations(:,iorient))
+                 end do
+              end do
+              do mm=1,Nwires
+                 radnw=radnw_range(mm)
+                 call ScalingOfTau(Nlist,Nequi,ALLEquiList,v_or,velocity,tau_zero,radnw,ffunc)
+                 do ii=1,nptk
+                    do jj=1,Nbands
+                       F_n_aux(jj,ii)=F_or(jj,ii)*ffunc(ii,jj)
+                    end do
+                 end do
+                 call TConductScalar(energy,v_or,F_n_aux,kappa_or)
+                 write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
+                      kappa_or,sum(kappa_or)
+              end do
+              close(3001)
+           end do
+        end if
+        allocate(ticks(nticks),cumulative_kappa(nbands,3,3,nticks))
+        ! Cumulative thermal conductivity.
+        call CumulativeTConduct(energy,velocity,F_n,ticks,cumulative_kappa)
+        do ii=1,nticks
+           do ll=1,nbands
+              call symmetrize_tensor(cumulative_kappa(ll,:,:,ii))
+           end do
+        end do
+        write(aux,"(I0)") 9*nbands+1
+        open(2002,file="BTE.cumulative_kappa_tensor",status="replace")
+        open(2003,file="BTE.cumulative_kappa_scalar",status="replace")
+        do ii=1,nticks
+           write(2002,"(10E20.10)") ticks(ii),&
+                sum(cumulative_kappa(:,:,:,ii),dim=1)
+           write(2003,"(2E20.10)") ticks(ii),&
+                sum(sum(cumulative_kappa(:,:,:,ii),dim=1),&
+                reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
+        end do
+        close(2002)
+        close(2003)
+        deallocate(ticks,cumulative_kappa)
+
+        ! Cumulative thermal conductivity vs angular frequency.
+        allocate(ticks(nticks),cumulative_kappa(nbands,3,3,nticks))
+        call CumulativeTConductOmega(energy,velocity,F_n,ticks,cumulative_kappa)
+        do ii=1,nticks
+           do ll=1,nbands
+              call symmetrize_tensor(cumulative_kappa(ll,:,:,ii))
+           end do
+        end do
+        write(aux,"(I0)") 9*nbands+1
+        open(2002,file="BTE.cumulative_kappaVsOmega_tensor",status="replace")
+        do ii=1,nticks
+           write(2002,"(10E20.10)") ticks(ii),&
+                sum(cumulative_kappa(:,:,:,ii),dim=1)
+        end do
+        close(2002)
+        deallocate(ticks,cumulative_kappa)
+     end if
+
+     call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+
+     ! If results for nanowires have been requested, repeat the iterative process
+     ! for each desired orientation, introducing the appropriate scaling of
+     ! relaxation times.
      if(nanowires) then
+        kappa_wires=0.d00
+        kappa_wires_reduce=0.d00
+        kk=ceiling(float(nwires)/numprocs)
         do iorient=1,norientations
+           if(myid.eq.0) then
+              write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
+                   iorient,":",orientations(:,iorient)
+           end if
            write(sorientation,"(I128)") iorient
-           open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation))//"_lower",status="replace")
            do ii=1,nptk
               do jj=1,Nbands
                  v_or(ii,jj)=dot_product(velocity(ii,jj,:),uorientations(:,iorient))
                  F_or(jj,ii)=dot_product(F_n_0(jj,ii,:),uorientations(:,iorient))
               end do
            end do
-           do mm=1,Nwires
+           do mm=myid+1,nwires,numprocs
               radnw=radnw_range(mm)
               call ScalingOfTau(Nlist,Nequi,ALLEquiList,v_or,velocity,tau_zero,radnw,ffunc)
               do ii=1,nptk
@@ -549,120 +591,41 @@ program ShengBTE
                  end do
               end do
               call TConductScalar(energy,v_or,F_n_aux,kappa_or)
-              write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
-                   kappa_or,sum(kappa_or)
+              if(convergence) then
+                 do ii=1,maxiter
+                    kappa_or_old=sum(kappa_or)
+                    call iteration_scalar(Nlist,Nequi,ALLEquiList,TypeofSymmetry,N_plus,N_minus,&
+                         Ntotal_plus,Ntotal_minus,Indof2ndPhonon_plus,Indof3rdPhonon_plus,&
+                         Indof2ndPhonon_minus,Indof3rdPhonon_minus,energy,v_or,&
+                         Gamma_plus,Gamma_minus,tau_zero,F_n_aux)
+                    do ll=1,nptk
+                       do jj=1,nbands
+                          F_n_aux(jj,ll)=F_n_aux(jj,ll)*ffunc(ll,jj)
+                       end do
+                    end do
+                    call TConductScalar(energy,v_or,F_n_aux,kappa_or)
+                    relchange=abs((sum(kappa_or)-kappa_or_old)/kappa_or_old)
+                    if(relchange.lt.eps)exit
+                 end do
+              end if
+              kappa_wires_reduce(:,mm)=kappa_or
            end do
-           close(3001)
+           call MPI_ALLREDUCE(kappa_wires_reduce,kappa_wires,Nbands*Nwires,&
+                MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+           if(myid.eq.0) then
+              write(aux,"(I0)") 3*nbands
+              open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
+              do ii=1,Nwires
+                 radnw=radnw_range(ii)
+                 write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
+                      kappa_wires(:,ii),sum(kappa_wires(:,ii))
+              end do
+              close(3001)
+           end if
         end do
      end if
-     allocate(ticks(nticks),cumulative_kappa(nbands,3,3,nticks))
-     ! Cumulative thermal conductivity.
-     call CumulativeTConduct(energy,velocity,F_n,ticks,cumulative_kappa)
-     do ii=1,nticks
-        do ll=1,nbands
-           call symmetrize_tensor(cumulative_kappa(ll,:,:,ii))
-        end do
-     end do
-     write(aux,"(I0)") 9*nbands+1
-!     open(2001,file="BTE.cumulative_kappa",status="replace")
-     open(2002,file="BTE.cumulative_kappa_tensor",status="replace")
-     open(2003,file="BTE.cumulative_kappa_scalar",status="replace")
-     do ii=1,nticks
-!        write(2001,"("//trim(adjustl(aux))//"E20.10)") ticks(ii),cumulative_kappa(:,:,:,ii)
-        write(2002,"(10E20.10)") ticks(ii),&
-             sum(cumulative_kappa(:,:,:,ii),dim=1)
-        write(2003,"(2E20.10)") ticks(ii),&
-             sum(sum(cumulative_kappa(:,:,:,ii),dim=1),&
-             reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
-     end do
-!     close(2001)
-     close(2002)
-     close(2003)
-     deallocate(ticks,cumulative_kappa)
-
-     ! Cumulative thermal conductivity vs angular frequency.
-     allocate(ticks(nticks),cumulative_kappa(nbands,3,3,nticks))
-     call CumulativeTConductOmega(energy,velocity,F_n,ticks,cumulative_kappa)
-     do ii=1,nticks
-        do ll=1,nbands
-           call symmetrize_tensor(cumulative_kappa(ll,:,:,ii))
-        end do
-     end do
-     write(aux,"(I0)") 9*nbands+1
-     open(2002,file="BTE.cumulative_kappaVsOmega_tensor",status="replace")
-     do ii=1,nticks
-        write(2002,"(10E20.10)") ticks(ii),&
-             sum(cumulative_kappa(:,:,:,ii),dim=1)
-     end do
-     close(2002)
-     deallocate(ticks,cumulative_kappa)
-  end if
-
-  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-
-  ! If results for nanowires have been requested, repeat the iterative process
-  ! for each desired orientation, introducing the appropriate scaling of
-  ! relaxation times.
-  if(nanowires) then
-     kappa_wires=0.d00
-     kappa_wires_reduce=0.d00
-     kk=ceiling(float(nwires)/numprocs)
-     do iorient=1,norientations
-        if(myid.eq.0) then
-           write(*,"(A,I0,A,3(x,I0))") "Info: nanowires with orientation ",&
-                iorient,":",orientations(:,iorient)
-        end if
-        write(sorientation,"(I128)") iorient
-        do ii=1,nptk
-           do jj=1,Nbands
-              v_or(ii,jj)=dot_product(velocity(ii,jj,:),uorientations(:,iorient))
-              F_or(jj,ii)=dot_product(F_n_0(jj,ii,:),uorientations(:,iorient))
-           end do
-        end do
-        do mm=myid+1,nwires,numprocs
-           radnw=radnw_range(mm)
-           call ScalingOfTau(Nlist,Nequi,ALLEquiList,v_or,velocity,tau_zero,radnw,ffunc)
-           do ii=1,nptk
-              do jj=1,Nbands
-                 F_n_aux(jj,ii)=F_or(jj,ii)*ffunc(ii,jj)
-              end do
-           end do
-           call TConductScalar(energy,v_or,F_n_aux,kappa_or)
-           if(convergence) then
-              do ii=1,maxiter
-                 kappa_or_old=sum(kappa_or)
-                 call iteration_scalar(Nlist,Nequi,ALLEquiList,TypeofSymmetry,N_plus,N_minus,&
-                      Ntotal_plus,Ntotal_minus,Indof2ndPhonon_plus,Indof3rdPhonon_plus,&
-                      Indof2ndPhonon_minus,Indof3rdPhonon_minus,energy,v_or,&
-                      Gamma_plus,Gamma_minus,tau_zero,F_n_aux)
-                 do ll=1,nptk
-                    do jj=1,nbands
-                       F_n_aux(jj,ll)=F_n_aux(jj,ll)*ffunc(ll,jj)
-                    end do
-                 end do
-                 call TConductScalar(energy,v_or,F_n_aux,kappa_or)
-                 relchange=abs((sum(kappa_or)-kappa_or_old)/kappa_or_old)
-                 if(relchange.lt.eps)exit
-              end do
-           end if
-           kappa_wires_reduce(:,mm)=kappa_or
-        end do
-        call MPI_ALLREDUCE(kappa_wires_reduce,kappa_wires,Nbands*Nwires,&
-             MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-        if(myid.eq.0) then
-           write(aux,"(I0)") 3*nbands
-           open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
-           do ii=1,Nwires
-              radnw=radnw_range(ii)
-              write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
-                   kappa_wires(:,ii),sum(kappa_wires(:,ii))
-           end do
-           close(3001)
-        end if
-     end do
-  end if
-   if (myid.eq.0) call change_directory("..")
-   ENDDO ! Tcounter
+     if (myid.eq.0) call change_directory(".."//C_NULL_CHAR)
+  end do ! Tcounter
 
 
   if(myid.eq.0)write(*,*) "Info: normal exit"
