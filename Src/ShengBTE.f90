@@ -38,7 +38,7 @@ program ShengBTE
   real(kind=8) :: kappa_sg(3,3),kappa_old(3,3),relchange
   integer(kind=4) :: i,j,ii,jj,kk,ll,mm
   integer(kind=4) :: Tcounter
-  real(kind=8),allocatable :: energy(:,:),q0(:,:),velocity(:,:,:),velocity_z(:,:)
+  real(kind=8),allocatable :: energy(:,:),q0(:,:),q0_reduced(:,:),velocity(:,:,:),velocity_z(:,:)
   complex(kind=8),allocatable :: eigenvect(:,:,:)
 
   real(kind=8),allocatable :: grun(:,:)
@@ -91,7 +91,7 @@ program ShengBTE
   allocate(energy(nptk,nbands))
   allocate(eigenvect(nptk,nbands,nbands))
   allocate(grun(nptk,nbands))
-  allocate(q0(nptk,3))
+  allocate(q0(nptk,3),q0_reduced(nptk,3))
   allocate(velocity(nptk,nbands,3))
   allocate(velocity_z(nptk,nbands))
   allocate(IJK(3,nptk))
@@ -118,7 +118,7 @@ program ShengBTE
   call wedge(Nlist,Nequi,List,ALLEquiList,TypeofSymmetry)
   do ll=1,Nlist
      do kk=1,Nequi(ll)
-        eqclasses(ALLEquiList(kk,ll))=List(ll)
+        eqclasses(ALLEquiList(kk,ll))=ll !List(ll)
      end do
   end do
 
@@ -127,9 +127,12 @@ program ShengBTE
      do jj=1,Ngrid(2)
         do kk=1,Ngrid(3)
            ll=((kk-1)*Ngrid(2)+(jj-1))*Ngrid(1)+ii
-           q0(ll,:)=rlattvec(:,1)*(ii-1.0)/ngrid(1)+&
-                rlattvec(:,2)*(jj-1.0)/ngrid(2)+&
-                rlattvec(:,3)*(kk-1.0)/ngrid(3)
+           q0(ll,:)=rlattvec(:,1)*(ii-1.d0)/ngrid(1)+&
+                rlattvec(:,2)*(jj-1.d0)/ngrid(2)+&
+                rlattvec(:,3)*(kk-1.d0)/ngrid(3)
+           q0_reduced(ll,1)=(ii-1.d0)/ngrid(1)
+           q0_reduced(ll,2)=(jj-1.d0)/ngrid(2)
+           q0_reduced(ll,3)=(kk-1.d0)/ngrid(3)
         end do
      end do
   end do
@@ -137,12 +140,12 @@ program ShengBTE
   if(myid.eq.0) then
      open(1,file="BTE.qpoints",status="replace")
      do ll=1,Nlist
-        write(1,"(I9,x,I9,x,3(E20.10,x))") List(ll),Nequi(ll),q0(List(ll),:)
+        write(1,"(I9,x,I9,x,3(E20.10,x))") List(ll),Nequi(ll),q0_reduced(List(ll),:)
      end do
      close(1)
      open(1,file="BTE.qpoints_full",status="replace")
      do ll=1,nptk
-        write(1,"(I9,x,I9,x,3(E20.10,x))") ll,eqclasses(ll),q0(ll,:)
+        write(1,"(I9,x,I9,x,3(E20.10,x))") ll,eqclasses(ll),q0_reduced(ll,:)
      end do
      close(1)
   end if
