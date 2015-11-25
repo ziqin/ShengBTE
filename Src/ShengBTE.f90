@@ -138,6 +138,11 @@ program ShengBTE
   end do
 
   if(myid.eq.0) then
+     open(1,file="BTE.ReciprocalLatticeVectors",status="replace")
+     write(1,"(3F20.10,A12)") rlattvec(:,1), "# nm-1,b1" 
+     write(1,"(3F20.10,A12)") rlattvec(:,2), "# nm-1,b2" 
+     write(1,"(3F20.10,A12)") rlattvec(:,3), "# nm-1,b3" 
+     close(1)
      open(1,file="BTE.qpoints",status="replace")
      do ll=1,Nlist
         write(1,"(I9,x,I9,x,3(E20.10,x))") List(ll),Nequi(ll),q0_reduced(List(ll),:)
