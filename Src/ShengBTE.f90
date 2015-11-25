@@ -184,7 +184,7 @@ program ShengBTE
      open(1,file="BTE.kappa_sg",status="replace")
      write(1,"(9E20.10)") kappa_sg
      close(1)
-     call change_directory("..")
+     call change_directory(".."//C_NULL_CHAR)
   end if
   enddo
 
