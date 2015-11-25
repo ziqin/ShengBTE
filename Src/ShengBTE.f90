@@ -161,6 +161,8 @@ program ShengBTE
   call eigenDM(energy,eigenvect,velocity)
   if(myid.eq.0)write(*,*) "Info: spectrum calculation finished"
 
+  open(101,file="BTE.cvVsT")
+  open(102,file="BTE.KappaTensorVsT_sg")
   do Tcounter=1,ceiling((T_max-T_min)/T_step)+1
      T=T_min+(Tcounter-1)*T_step
      if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
@@ -179,11 +181,15 @@ program ShengBTE
         close(1)
         call kappasg(energy,velocity,kappa_sg)
         open(1,file="BTE.kappa_sg",status="replace")
-        write(1,"(9E20.10)") kappa_sg
+        write(1,"(9E14.5)") kappa_sg
         close(1)
+        write(101,"(F7.1,E14.5)") T,cv(energy)
+        write(102,"(F7.1,9E14.5)") T,kappa_sg
         call change_directory(".."//C_NULL_CHAR)
      end if
   enddo
+  close(101)
+  close(102)
 
   write(aux,"(I0)") 3*Nbands
   if(myid.eq.0) then
