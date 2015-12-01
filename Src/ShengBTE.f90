@@ -358,10 +358,24 @@ program ShengBTE
         write(1,"("//trim(adjustl(aux))//"E20.10)") grun(list(ll),:)
      end do
      close(1)
-     open(1,file="BTE.gruneisen_total",status="replace")
-     write(1,*) total_grun(energy,grun)
-     close(1)
   end if
+  open(101,file="BTE.gruneisenVsT_total")
+  do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
+     T=T_min+(Tcounter-1)*T_step
+     if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
+     if (T.gt.(T_max+1.d0)) T=T_max 
+     if (myid.eq.0) then
+        write(aux2,"(I0)") NINT(T)
+        path="T"//trim(adjustl(aux2))//"K"
+        call change_directory(trim(adjustl(path))//C_NULL_CHAR)
+        open(1,file="BTE.gruneisen_total",status="replace")
+        write(1,*) total_grun(energy,grun)
+        close(1)
+        write(101,"(F7.1,E14.5)") T,total_grun(energy,grun)
+        call change_directory(".."//C_NULL_CHAR)
+     endif
+  enddo
+  close(101)
   deallocate(grun)
 
   ! This is the most expensive part of the calculation: obtaining the
