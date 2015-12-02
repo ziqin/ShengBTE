@@ -493,7 +493,7 @@ program ShengBTE
               if(relchange.lt.eps)exit
            end do
            write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
-           call flush_outputs()
+           if (myid.eq.0) call flush_outputs()
         end if
         close(2001)
         close(2002)
