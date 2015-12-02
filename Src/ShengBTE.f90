@@ -194,6 +194,7 @@ program ShengBTE
         write(101,"(F7.1,E14.5)") T,cv(energy)
         write(102,"(F7.1,9E14.5)") T,kappa_sg
         call change_directory(".."//C_NULL_CHAR)
+        call flush_outputs()
      end if
   enddo
   close(101)
@@ -360,7 +361,7 @@ program ShengBTE
      close(1)
   end if
   open(101,file="BTE.gruneisenVsT_total")
-  do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
+  do Tcounter=1,ceiling((T_max-T_min)/T_step)+1
      T=T_min+(Tcounter-1)*T_step
      if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
      if (T.gt.(T_max+1.d0)) T=T_max 
@@ -394,7 +395,7 @@ program ShengBTE
      allocate(Gamma_plus(Ntotal_plus))
      allocate(Gamma_minus(Ntotal_minus))
   endif
-  do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
+  do Tcounter=1,ceiling((T_max-T_min)/T_step)+1
      T=T_min+(Tcounter-1)*T_step
      if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
      if (T.gt.(T_max+1.d0)) T=T_max 
@@ -465,6 +466,7 @@ program ShengBTE
         write(2003,"(I9,E20.10,E20.10)") 0,&
              sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
         write(303,"(F7.1,9E14.5)") T,sum(ThConductivity,dim=1)
+        call flush_outputs()
 
         ! Iterate to convergence if desired.
         if(convergence) then
@@ -493,7 +495,7 @@ program ShengBTE
               if(relchange.lt.eps)exit
            end do
            write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
-           if (myid.eq.0) call flush_outputs()
+           call flush_outputs()
         end if
         close(2001)
         close(2002)
