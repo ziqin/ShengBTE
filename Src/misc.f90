@@ -48,6 +48,12 @@ module misc
        type(c_ptr), value :: file
        integer(c_int) :: fflush
      end function fflush
+
+     ! Sync buffers to disk (interface to the system's sync).
+     subroutine sync() bind(c,name="sync")
+       use iso_c_binding
+       implicit none
+     end subroutine sync
   end interface
 
 contains
@@ -140,5 +146,6 @@ contains
     if (present(result)) then
        result = tmp
     end if
+    call sync()
   end subroutine flush_outputs
 end module misc
