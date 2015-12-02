@@ -373,6 +373,7 @@ program ShengBTE
         close(1)
         write(101,"(F7.1,E14.5)") T,total_grun(energy,grun)
         call change_directory(".."//C_NULL_CHAR)
+        call flush_outputs()
      endif
   enddo
   close(101)
@@ -652,7 +653,10 @@ program ShengBTE
            end if
         end do
      end if
-     if (myid.eq.0) call change_directory(".."//C_NULL_CHAR)
+     if (myid.eq.0) then
+        call change_directory(".."//C_NULL_CHAR)
+        call flush_outputs()
+     end if
   end do ! Tcounter
 
 

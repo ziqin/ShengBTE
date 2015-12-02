@@ -23,8 +23,8 @@ module misc
   use iso_c_binding
   implicit none
 
-  ! Create a directory (interface to the system's mkdir).
   interface
+     ! Create a directory (interface to the system's mkdir).
      function mkdir(path,mode) bind(c,name="mkdir")
        use iso_c_binding
        implicit none
@@ -33,12 +33,21 @@ module misc
        integer(c_int) :: mkdir
      end function mkdir
 
+     ! Change directory (interface to the system's chdir).
      function syschdir(path) bind(c,name="chdir")
        use iso_c_binding
        implicit none
        character(kind=c_char,len=1) :: path(*)
        integer(c_int) :: syschdir
      end function syschdir
+
+     ! Flush open file (interface to C's stdio fflush).
+     function fflush(file) bind(c,name="fflush")
+       use iso_c_binding
+       implicit none
+       type(c_ptr), value :: file
+       integer(c_int) :: fflush
+     end function fflush
   end interface
 
 contains
@@ -120,4 +129,16 @@ contains
        result = tmp
     end if
   end subroutine change_directory
+
+  ! Flush all open streams.
+  subroutine flush_outputs(result)
+    implicit none
+    integer(kind=4),intent(out),optional :: result
+    
+    integer(kind=4) :: tmp
+    tmp=fflush(c_null_ptr)
+    if (present(result)) then
+       result = tmp
+    end if
+  end subroutine flush_outputs
 end module misc
