@@ -493,7 +493,7 @@ program ShengBTE
               if(relchange.lt.eps)exit
            end do
            write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
-
+           call flush_outputs()
         end if
         close(2001)
         close(2002)
@@ -646,7 +646,7 @@ program ShengBTE
               open(3001,file="BTE.kappa_nw_"//trim(adjustl(sorientation)),status="replace")
               do ii=1,Nwires
                  radnw=radnw_range(ii)
-                 write(3001,"(E30.20,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
+                 write(3001,"(E30.200320,"//trim(adjustl(aux))//"E20.10,E20.10)") 2.d0*radnw,&
                       kappa_wires(:,ii),sum(kappa_wires(:,ii))
               end do
               close(3001)
