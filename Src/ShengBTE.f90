@@ -192,7 +192,9 @@ program ShengBTE
         write(1,"(9E14.5)") kappa_sg
         close(1)
         write(101,"(F7.1,E14.5)") T,cv(energy)
+        flush(101)
         write(102,"(F7.1,9E14.5)") T,kappa_sg
+        flush(102)
         call change_directory(".."//C_NULL_CHAR)
      end if
   enddo
@@ -372,6 +374,7 @@ program ShengBTE
         write(1,*) total_grun(energy,grun)
         close(1)
         write(101,"(F7.1,E14.5)") T,total_grun(energy,grun)
+        flush(101)
         call change_directory(".."//C_NULL_CHAR)
      endif
   enddo
@@ -464,6 +467,7 @@ program ShengBTE
         write(2003,"(I9,E20.10,E20.10)") 0,&
              sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
         write(303,"(F7.1,9E14.5)") T,sum(ThConductivity,dim=1)
+        flush(303)
 
         ! Iterate to convergence if desired.
         if(convergence) then
@@ -482,9 +486,12 @@ program ShengBTE
                  call symmetrize_tensor(ThConductivity(ll,:,:))
               end do
               write(2001,"(I9,"//trim(adjustl(aux))//"E20.10)") ii,ThConductivity
+              flush(2001)
               write(2002,"(I9,9E20.10)") ii,sum(ThConductivity,dim=1)
+              flush(2002)
               write(2003,"(I9,E20.10)") ii,&
                    sum(sum(ThConductivity,dim=1),reshape((/((i==j,i=1,3),j=1,3)/),(/3,3/)))/3.
+              flush(2003)
               relchange=twonorm3x3(sum(ThConductivity,dim=1)-kappa_old)/&
                    twonorm3x3(kappa_old)
               write(*,*) "Info: Iteration",ii
@@ -492,7 +499,7 @@ program ShengBTE
               if(relchange.lt.eps)exit
            end do
            write(403,"(F7.1,9E14.5,I6)") T,sum(ThConductivity,dim=1),ii
-
+           flush(403)
         end if
         close(2001)
         close(2002)
