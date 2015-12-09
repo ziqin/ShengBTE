@@ -145,7 +145,7 @@ program ShengBTE
      close(1)
      open(1,file="BTE.qpoints",status="replace")
      do ll=1,Nlist
-        write(1,"(I9,x,I9,x,3(E20.10,x))") List(ll),Nequi(ll),q0_reduced(List(ll),:)
+        write(1,"(I9,x,I9,x,I9,x,3(E20.10,x))") ll, List(ll),Nequi(ll),q0_reduced(List(ll),:)
      end do
      close(1)
      open(1,file="BTE.qpoints_full",status="replace")
