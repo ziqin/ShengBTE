@@ -135,36 +135,40 @@ The following is an example of one such block:
 
 ## Output files
 
-Many files are created during a successful run of `ShengBTE`. They contain not only the thermal conductivity and related quantities, but also a set of intermediate results that may be useful to diagnose problems. This section includes a brief description of their contents.
+Many files including temperature-dependent directories are created during a successful run of `ShengBTE`. They contain not only the thermal conductivity and related quantities, but also a set of intermediate results that may be useful to diagnose problems. For some quantites, values only for the q points in the irreducible wedge are output, values for the rest can be recovered by looking into the equivilent points in the irreducible wedge.  This section includes a brief description of their contents.
 
-- `BTE.qpoints`: the first column in this file contains the indices of a set of irreducible q points in the Brillouin zone obtained starting with an `ngrid(1)` x `ngrid(2)` x `ngrid(3)` &Gamma;-centered regular grid. The second column lists the corresponding degeneracies. The remaining three columns are the Cartesian coordinates of a representative q point in each equivalence class.
-- `BTE.qpoints_full`: this file lists all q points used for the calculation. The first column is a sequentially increasing index, the second contains the index of the irreducible q point equivalent to the point under consideration, and the three remaining columns are Cartesian coordinates.
-- `BTE.omega`: phonon angular frequencies at each of those q points, in rad/ps.
-- `BTE.omega_full`: phonon angular frequencies at each q point in the Brillouin zone, in rad/ps
-- `BTE.v`: group velocities of those modes, in km/s (or nm THz)
-- `BTE.v_full`: group velocities of all modes for all points listed in `BTE.qpoints_full`
+- `BTE.ReciprocalLatticeVectors`: three reciprocal lattice basis vectors b1, b2 and b3 in nm-1. 
+- `BTE.qpoints`: This file gives q points in the irreducible wedge of Brillouin zone (BZ), of which the relative coordinates with respect to the reciprocal lattice vectors are shown in the last 3 columns. The 1st and 2nd columns correspond the indices of those q points numbered in the irreducible wedge and in the whole Brillouin zone, respectively. The 3rd column lists the corresponding degeneracies. 
+- `BTE.qpoints_full`: this file lists all q points in `ngrid(1)` x `ngrid(2)` x `ngrid(3)` &Gamma;-centered regular grid. The 1st column is a sequentially increasing index, the 2nd column contains the index of the equivalent irreducible q point numbered in the irreducible wedge, and the 3 remaining columns are the relative coordinates with respect to the reciprocal lattice vectors for the q point.
+- `BTE.omega`: phonon angular frequencies of those q points in the irreducible wedge, in rad/ps.
+- `BTE.v`: group velocities of those modes (q index changes first, and then band index) in the irreducible wedge, in km/s (or nm THz)
+- `BTE.v_full`: group velocities of all modes (q index changes first, and then band index)for all points listed in `BTE.qpoints_full`
+- `BTE.w_boundary`: boundary scattering rate (in ps<sup>-1</sup> , 2nd column) obtained for a characteristic length L=1 nm and a specularity parameter p=0 vs angular frequency (in rad/ps, 1st column) for those modes (q index changes first, and then band index) in the irreducible wedge.
+- `BTE.w_isotopic`: isotopic scattering rate (in ps<sup>-1</sup> , 2nd column) vs angular frequency (in rad/ps, 1st column) for those modes (q index changes first, and then band index) in the irreducible wedge.
+- `BTE.dos`: the phonon density of states (2nd column) vs the angular frequencies (1st column, in rad/ps)
+- `BTE.pdos`: the phonon density of states projected on each atom in the unit cell (from the 2nd column on) vs the angular frequencies (1st column, in rad/ps)
+- `BTE.WP3`: weighted phase space available for three-phonon processes  (in ps<sup>4</sup>rad<sup>-4</sup> , 2nd column) vs angular frequency (in rad/ps, 1st column) for those modes (q index changes first, and then band index) in the irreducible wedge. See [Phys. Rev. B 91, 144304 (2015)] for definition of weighted phase space.
+- `BTE.WP3_plus`: WP3 contributed by phonon absorption processes alone
+- `BTE.WP3_minus`: WP3 contributed by phonon emission processes alone
+- `BTE.gruneisen`: Grüneisen parameter for each irreducible q point and phonon band
+- `BTE.cvVsT`: specific heat of the system, in J/\(m<sup>3</sup> K) as a function of T (1st column)
+- `BTE.gruneisenVsT_total`: total Grüneisen parameter obtained as a weighted sum of the mode contributions as a function of T (1st column)
+- `BTE.KappaTensorVsT_sg`:  thermal conductivity tensor per unit of mean free path in the small-grain limit, in W/(m K nm) as a function of T (1st column). 
+- `BTE.KappaTensorVsT_RTA`: total thermal conductivity tensor in unit of W/(m K) in the Relaxation Time Approximation (zero-order) as a function of T (1st column). 
+- `BTE.KappaTensorVsT_CONV`: total CONVerged thermal conductivity tensor in unit of W/(m K) as a function of T (1st column). The last column gives the number of iterations reaching convergence.
+
+Under temperature-dependent directories:
+
 - `BTE.cv`: specific heat of the system, in J/\(m<sup>3</sup> K)
 - `BTE.kappa_sg`: thermal conductivity per unit of mean free path in the small-grain limit, in W/(m K nm)
-- `BTE.dos`: the second column of this file contains the phonon density of states evaluated at the angular frequencies (in rad/ps) specified by its first column
-- `BTE.pdos`: the second and further columns of this file contain the phonon density of states evaluated at the angular frequencies (in rad/ps) specified by its first column and projected over each atom in the unit cell
-- `BTE.P3`: volume in phase space available for three-phonon processes, for each irreducible q point and phonon band
-- `BTE.P3_total`: sum of all the contributions in `BTE.P3`, total volume in phase space available for three-phonon processes
-- `BTE.P3_plus*`, `BTE.P3_minus*`: equivalents of `BTE.P3` and `BTE.P3_total`, but including only contributions from emission (minus) or absorption (plus) processes
-- `BTE.gruneisen`: Grüneisen parameter for each irreducible q point and phonon band
 - `BTE.gruneisen_total`: total Grüneisen parameter obtained as a weighted sum of the mode contributions
-- `BTE.w_isotopic`: isotopic contribution to the scattering rate, for each q point and each band, in ps<sup>-1</sup>
 - `BTE.w_anharmonic`: contribution of three-phonon processes to the scattering rate, for each q point and each band, in ps<sup>-1</sup>
 - `BTE.w`: total zeroth-order scattering rate for each q point and each band, in ps<sup>-1</sup>
 - `BTE.w_final`: total converged scattering rate for each irreducible q point and each band, in ps<sup>-1</sup>
-- `BTE.w_final_full`: total converged scattering rate for each q point and each band, in ps<sup>-1</sup>
 - `BTE.kappa`: tensorial contribution to the thermal conductivity from each band, in W/(m K). The last line contains converged values, the rest show the convergence process.
 - `BTE.kappa_tensor`: total thermal conductivity, a 3 x 3 tensor expressed in W/(m K). The last line contains converged values, the rest show the convergence process.
 - `BTE.kappa_scalar`: average of diagonal elements of the thermal conductivity tensor, in W/(m K). The last line contains converged values, the rest show the convergence process.
-- `BTE.kappa_mode`:  tensorial contribution to the thermal conductivity from each mode, in W/(m K). Note that only the converged values are written out.
 - `BTE.kappa_nw_*`: thermal conductivities of nanowires built along different directions of the bulk material, for different radii. The first column in each file is a diameter, the following 3 x `natoms` contain the contributions of each band and the last column contains the total thermal conductivity. Diameters are expressed in nm and conductivities in W/(m K)
 - `BTE.kappa_nw_*_lower`: lower bounds to the thermal conductivities of nanowires built along different directions of the bulk material, for different radii. The first column in each file is a diameter, the following 3 x `natoms` contain the contributions of each band and the last column contains the total thermal conductivity. Diameters are expressed in nm and conductivities in W/(m K). Each lower bound is estimated by using the set of zeroth-order bulk relaxation times.
-- `BTE.cumulative_kappa_*`: this set of files is analogous to `BTE.kappa*`, except in that their first column specifies a cutoff mean free path for phonons.
-- `BTE.w_boundary`: boundary scattering rate for each irreducible q point and each mode, for a characteristic length L=1 nm and a specularity parameter p=0. Rescale accordingly to obtain boundary scattering rates in ps<sup>-1</sup>.
-- `BTE.w_boundary_full`: boundary scattering rate for each q point and each mode, for a characteristic length L=1 nm and a specularity parameter p=0. Rescale accordingly to obtain boundary scattering rates in ps<sup>-1</sup>.
-- `KappaTensorVsT_RTA`: total thermal conductivity tensor in unit of W/(m K) in the Relaxation Time Approximation (zero-order) as a function of T (1st column). The last line contains converged values, the rest show the convergence process.
-- `KappaTensorVsT_CONV`: total CONVerged thermal conductivity tensor in unit of W/(m K) as a function of T (1st column). The last column gives the number of iterations reaching convergence.
+- `BTE.cumulative_kappa_*`: this set of files is analogous to `BTE.kappa*`, except in that their 1st column specifies a cutoff mean free path (in nm) when calculating the total contribution.
+- `BTE.cumulative_kappaVsOmega_tensor`: this is analogous to `BTE.cumulative_kappa_tensor`, except in that the 1st column specifies a cutoff angular frequency (in rad/ps) when calculating the total contribution.
