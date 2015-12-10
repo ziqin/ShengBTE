@@ -313,27 +313,27 @@ program ShengBTE
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
 
   if(myid.eq.0) then
-     open(1,file="BTE.WP3_plus",status="replace")
+!     open(1,file="BTE.WP3_plus",status="replace")
      do i=1,Nbands
         do ll=1,Nlist
-           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
+!           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
         enddo
      end do
-     close(1)
-     open(1,file="BTE.WP3_minus",status="replace")
+!     close(1)
+!     open(1,file="BTE.WP3_minus",status="replace")
      do i=1,Nbands
         do ll=1,Nlist
-           write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
+!           write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
         enddo
      end do
-     close(1)
-     open(1,file="BTE.WP3",status="replace")
+!     close(1)
+!     open(1,file="BTE.WP3",status="replace")
      do i=1,Nbands
         do ll=1,Nlist
-           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
+!           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
         enddo
      end do
-     close(1)
+!     close(1)
   end if
 
   deallocate(Pspace_plus_total)
@@ -386,6 +386,9 @@ program ShengBTE
   ! When the iterative solution to the full linearized BTE is not
   ! requested (i.e., when the relaxation-time approximation is
   ! enough) we use optimized routines with a much smaller memory footprint.
+  ! Phase space volume per mode and their sum.
+  allocate(Pspace_plus_total(Nbands,Nlist))
+  allocate(Pspace_minus_total(Nbands,Nlist))
   open(303,file="BTE.KappaTensorVsT_RTA")
   if(convergence) then
      open(403,file="BTE.KappaTensorVsT_CONV")
@@ -410,10 +413,34 @@ program ShengBTE
         call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
              Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
              Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
-             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
+             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,Pspace_plus_total,Pspace_minus_total)
      else
         call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
-             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt)
+             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,Pspace_plus_total,Pspace_minus_total)
+     end if
+
+     if(myid.eq.0) then
+        open(1,file="BTE.WP3_plus",status="replace")
+        do i=1,Nbands
+           do ll=1,Nlist
+              write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
+           enddo
+        end do
+        close(1)
+        open(1,file="BTE.WP3_minus",status="replace")
+        do i=1,Nbands
+           do ll=1,Nlist
+              write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
+           enddo
+        end do
+        close(1)
+        open(1,file="BTE.WP3",status="replace")
+        do i=1,Nbands
+           do ll=1,Nlist
+              write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
+           enddo
+        end do
+        close(1)
      end if
 
      write(aux,"(I0)") Nbands
