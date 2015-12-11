@@ -313,27 +313,37 @@ program ShengBTE
   if(myid.eq.0)write(*,*) "Info: Ntotal_minus =",Ntotal_minus
 
   if(myid.eq.0) then
-!     open(1,file="BTE.WP3_plus",status="replace")
-     do i=1,Nbands
-        do ll=1,Nlist
-!           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
-        enddo
+     open(1,file="BTE.P3_plus",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_plus_total(:,ll)
      end do
-!     close(1)
-!     open(1,file="BTE.WP3_minus",status="replace")
-     do i=1,Nbands
-        do ll=1,Nlist
-!           write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
-        enddo
+     close(1)
+     open(1,file="BTE.P3_minus",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") Pspace_minus_total(:,ll)
      end do
-!     close(1)
-!     open(1,file="BTE.WP3",status="replace")
-     do i=1,Nbands
-        do ll=1,Nlist
-!           write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
-        enddo
+     close(1)
+     open(1,file="BTE.P3",status="replace")
+     do ll=1,Nlist
+        write(1,"("//trim(adjustl(aux))//"E20.10)") 2.*(Pspace_plus_total(:,ll)+&
+             Pspace_minus_total(:,ll)/2.)/3.
      end do
-!     close(1)
+     close(1)
+     do ii=1,Nlist
+        Pspace_plus_total(:,ii)=Pspace_plus_total(:,ii)*Nequi(ii)
+     end do
+     open(1,file="BTE.P3_plus_total",status="replace")
+     write(1,*) sum(Pspace_plus_total)
+     close(1)
+     do ii=1,Nlist
+        Pspace_minus_total(:,ii)=Pspace_minus_total(:,ii)*Nequi(ii)
+     end do
+     open(1,file="BTE.P3_minus_total",status="replace")
+     write(1,*) sum(Pspace_minus_total)
+     close(1)
+     open(1,file="BTE.P3_total",status="replace")
+     write(1,*) 2.*(sum(Pspace_plus_total)+sum(Pspace_minus_total)/2.)/3.
+     close(1)
   end if
 
   deallocate(Pspace_plus_total)

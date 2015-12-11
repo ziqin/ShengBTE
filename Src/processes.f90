@@ -464,7 +464,6 @@ contains
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
     integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
-    real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
@@ -485,7 +484,6 @@ contains
           do ii=1,nptk
              qprime=IJK(:,ii)
              omegap=energy(ii,j)
-             fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN absorption process-----------
              do k=1,Nbands
                 qdprime=q+qprime
@@ -498,10 +496,9 @@ contains
                         velocity(ss,k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       N_plus=N_plus+1
-                      fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-! refer users to [Phys. Rev. B 91, 144304 (2015)] for weighted phase space
-                      P_plus=P_plus+(fBEprime-fBEdprime)*&
-                           exp(-(omega+omegap-omegadp)**2/(sigma**2))/(sigma*sqrt(Pi))/(omega*omegap*omegadp)/nptk
+                      P_plus=P_plus+&
+                           exp(-(omega+omegap-omegadp)**2/(sigma**2))/&
+                           (sigma*sqrt(Pi)*nptk**2*nbands**3)
                    end if
                 end if
              end do ! k
@@ -524,7 +521,6 @@ contains
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
     integer(kind=4) :: ii,jj,kk,ll,ss
     real(kind=8) :: sigma
-    real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
@@ -545,7 +541,6 @@ contains
           do ii=1,nptk
              qprime=IJK(:,ii)
              omegap=energy(ii,j)
-             fBEprime=1.d0/(exp(hbar*omegap/Kb/T)-1.D0)
              !--------BEGIN emission process-----------
              do k=1,Nbands
                 qdprime=q-qprime
@@ -558,10 +553,9 @@ contains
                         velocity(ss,k,:))
                    if(abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       N_minus=N_minus+1
-                     fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-! refer users to [Phys. Rev. B 91, 144304 (2015)] for weighted phase space
-                      P_minus=P_minus+5.d-1*(fBEprime+fBEdprime+1.d0)*&
-                           exp(-(omega-omegap-omegadp)**2/(sigma**2))/(sigma*sqrt(Pi))/(omega*omegap*omegadp)/nptk
+                      P_minus=P_minus+&
+                           exp(-(omega-omegap-omegadp)**2/(sigma**2))/&
+                           (sigma*sqrt(Pi)*nptk**2*nbands**3)
                    end if
                 end if
              end do ! k
