@@ -602,10 +602,12 @@ contains
     N_minus_reduce=0
 
     do mm=myid+1,Nbands*Nlist,numprocs
-       call NP_plus(mm,energy,velocity,Nlist,List,IJK,&
-            N_plus_reduce(mm),Pspace_plus_reduce(mm))
-       call NP_minus(mm,energy,velocity,Nlist,List,IJK,&
-            N_minus_reduce(mm),Pspace_minus_reduce(mm))
+       if (energy(List(int((mm-1)/Nbands)+1),modulo(mm-1,Nbands)+1).le.omega_max) then
+          call NP_plus(mm,energy,velocity,Nlist,List,IJK,&
+               N_plus_reduce(mm),Pspace_plus_reduce(mm))
+          call NP_minus(mm,energy,velocity,Nlist,List,IJK,&
+               N_minus_reduce(mm),Pspace_minus_reduce(mm))
+       endif
     end do
 
     call MPI_ALLREDUCE(N_plus_reduce,N_plus,Nbands*Nlist,MPI_INTEGER,&
@@ -674,14 +676,16 @@ contains
                         velocity(ss,k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      Vp=Vp_plus(i,j,k,list(ll),ii,ss,&
-                           realqprime,realqdprime,eigenvect,&
-                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       WP3=(fBEprime-fBEdprime)*&
                            exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)
                       WP3_plus=WP3_plus+WP3
-                      Gamma_plus=Gamma_plus+hbarp*pi/4.d0*abs(Vp)**2
+                      if (.not.onlyharmonic) then
+                      Vp=Vp_plus(i,j,k,list(ll),ii,ss,&
+                           realqprime,realqdprime,eigenvect,&
+                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
+                      Gamma_plus=Gamma_plus+hbarp*pi/4.d0*WP3*abs(Vp)**2
+                      endif
                    end if
                 end if
              end do ! k
@@ -750,14 +754,16 @@ contains
                         velocity(ss,k,:))
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
-                      Vp=Vp_minus(i,j,k,list(ll),ii,ss,&
-                           realqprime,realqdprime,eigenvect,&
-                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       WP3=(fBEprime+fBEdprime+1)*&
                            exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
                            (omega*omegap*omegadp)
                       WP3_minus=WP3_minus+WP3
+                      if (.not.onlyharmonic) then
+                      Vp=Vp_minus(i,j,k,list(ll),ii,ss,&
+                           realqprime,realqdprime,eigenvect,&
+                           Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
                       Gamma_minus=Gamma_minus+hbarp*pi/4.d0*WP3*abs(Vp)**2
+                      endif
                    end if
                 end if
              end do ! k
@@ -812,14 +818,16 @@ contains
     do mm=myid+1,Nbands*NList,numprocs
        i=modulo(mm-1,Nbands)+1
        ll=int((mm-1)/Nbands)+1
-       call RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
-            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-            Gamma_plus,WP3_plus_reduce(mm))
-       rate_scatt_plus_reduce(i,ll)=Gamma_plus
-       call RTA_minus(mm,energy,velocity,eigenvect,Nlist,List,&
-            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-            Gamma_minus,WP3_minus_reduce(mm))
-       rate_scatt_minus_reduce(i,ll)=Gamma_minus*5.D-1
+       if (energy(List(ll),i).le.omega_max) then
+          call RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
+               Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+               Gamma_plus,WP3_plus_reduce(mm))
+          rate_scatt_plus_reduce(i,ll)=Gamma_plus
+          call RTA_minus(mm,energy,velocity,eigenvect,Nlist,List,&
+               Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+               Gamma_minus,WP3_minus_reduce(mm))
+          rate_scatt_minus_reduce(i,ll)=Gamma_minus*5.D-1
+       endif
     end do
 
     call MPI_ALLREDUCE(rate_scatt_plus_reduce,rate_scatt_plus,Nbands*Nlist,&

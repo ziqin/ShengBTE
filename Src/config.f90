@@ -36,9 +36,9 @@ module config
        epsilon,born,scell,orientations
   integer(kind=4) :: maxiter,nticks
   real(kind=8) :: T,scalebroad,rmin,rmax,dr,eps
-  real(kind=8) :: T_min,T_max,T_step
+  real(kind=8) :: T_min,T_max,T_step,omega_max
   namelist /parameters/ T,scalebroad,rmin,rmax,dr,maxiter,nticks,eps,&
-           T_min,T_max,T_step
+           T_min,T_max,T_step,omega_max
   logical :: nonanalytic,convergence,isotopes,autoisotopes,nanowires,onlyharmonic,espresso
   namelist /flags/ nonanalytic,convergence,isotopes,autoisotopes,&
        nanowires,onlyharmonic,espresso
@@ -140,6 +140,7 @@ contains
     maxiter=1000
     nticks=100
     eps=1e-5
+    omega_max=1.d100
     read(1,nml=parameters)
     if ((T.le.0.).and.(T_min.le.0)) then
        if(myid.eq.0)write(error_unit,*) "Error: T must be >0 K"

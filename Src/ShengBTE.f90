@@ -171,12 +171,13 @@ program ShengBTE
 
   open(101,file="BTE.cvVsT")
   open(102,file="BTE.KappaTensorVsT_sg")
+  if (myid.eq.0) print*, "Info: start calculating specific heat and kappa in the small-grain limit "
   do Tcounter=1,ceiling((T_max-T_min)/T_step)+1
      T=T_min+(Tcounter-1)*T_step
      if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
      if (T.gt.(T_max+1.d0)) T=T_max 
      if (myid.eq.0) then
-        print *, "Temperature=", T
+        print *, "Info: Temperature=", T
         write(aux2,"(I0)") NINT(T)
         path="T"//trim(adjustl(aux2))//"K"
         call create_directory(trim(adjustl(path))//C_NULL_CHAR)
@@ -350,6 +351,46 @@ program ShengBTE
      close(1)
   end if
 
+  if(onlyharmonic) then
+! weighted phase space (WP3) is calculated here if onlyharmonic=.true., otherwise WP3 will be calculated later together with BTE.w_anharmonic 
+  if (myid.eq.0) print*, "Info: start calculating weighted phase space"
+  do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
+     T=T_min+(Tcounter-1)*T_step
+     if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
+     if (T.gt.(T_max+1.d0)) T=T_max 
+     if (myid.eq.0) then
+        print *, "Info: Temperature=", T
+        write(aux2,"(I0)") NINT(T)
+        path="T"//trim(adjustl(aux2))//"K"
+        call change_directory(trim(adjustl(path))//C_NULL_CHAR)
+     endif
+     call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
+             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
+     if(myid.eq.0) then
+        open(1,file="BTE.WP3_plus",status="replace")
+        do i=1,Nbands
+           do ll=1,Nlist
+              write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)
+           enddo
+        end do
+        close(1)
+        open(1,file="BTE.WP3_minus",status="replace")
+        do i=1,Nbands
+           do ll=1,Nlist
+              write(1,"(2E14.5)") energy(list(ll),i),Pspace_minus_total(i,ll)
+           enddo
+        end do
+        close(1)
+        open(1,file="BTE.WP3",status="replace")
+        do i=1,Nbands
+           do ll=1,Nlist
+              write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
+           enddo
+        end do
+        close(1)
+     end if
+  enddo
+  endif  ! onlyharmonic
   deallocate(Pspace_plus_total)
   deallocate(Pspace_minus_total)
 
@@ -400,7 +441,7 @@ program ShengBTE
   ! When the iterative solution to the full linearized BTE is not
   ! requested (i.e., when the relaxation-time approximation is
   ! enough) we use optimized routines with a much smaller memory footprint.
-  ! Phase space volume per mode and their sum.
+  ! weighted phase space volume per mode .
   allocate(Pspace_plus_total(Nbands,Nlist))
   allocate(Pspace_minus_total(Nbands,Nlist))
   open(303,file="BTE.KappaTensorVsT_RTA")
@@ -413,12 +454,13 @@ program ShengBTE
      allocate(Gamma_plus(Ntotal_plus))
      allocate(Gamma_minus(Ntotal_minus))
   endif
+  if (myid.eq.0) print*, "Info: start calculating kappa"
   do Tcounter=1,CEILING((T_max-T_min)/T_step)+1
      T=T_min+(Tcounter-1)*T_step
      if ((T.gt.T_max).and.(T.lt.(T_max+1.d0)))  exit 
      if (T.gt.(T_max+1.d0)) T=T_max 
      if (myid.eq.0) then
-        print *, "Temperature=", T
+        print *, "Info: Temperature=", T
         write(aux2,"(I0)") NINT(T)
         path="T"//trim(adjustl(aux2))//"K"
         call change_directory(trim(adjustl(path))//C_NULL_CHAR)
