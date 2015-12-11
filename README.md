@@ -61,6 +61,7 @@ The contents of this file describe the system to be studied and specify a set of
 - `&parameters` namelist:
     - `T` (real, K): temperature to be used in the case of single temperature calculation
     - `T_min`,`T_max`,`T_step` (real, K): the minimum temperature, the maximum temperature and the increment to be used for multiple-temperature calculation. T takes the priority if it is present. 
+    - `omega_max` (real, rad/ps, default=1.e100): the max angular frequency up to which the anharmonic scattering properties are calculated for limited purposes. 
     - `scalebroad` (real, default=1.0): scale parameter for Gaussian smearing. The default is theoretically guaranteed to work, but significant speedups can sometimes be achieved by reducing it, with negligible loss of precision.
     - `rmin` (real, nm, default=5.0): minimum radius of nanowires whose thermal conductivity will be computed
     - `rmax` (real, nm, default=505.0): maximum radius of nanowires whose thermal conductivity will be computed
@@ -147,9 +148,9 @@ Many files including temperature-dependent directories are created during a succ
 - `BTE.w_isotopic`: isotopic scattering rate (in ps<sup>-1</sup> , 2nd column) vs angular frequency (in rad/ps, 1st column) for those modes (q index changes first, and then band index) in the irreducible wedge.
 - `BTE.dos`: the phonon density of states (2nd column) vs the angular frequencies (1st column, in rad/ps)
 - `BTE.pdos`: the phonon density of states projected on each atom in the unit cell (from the 2nd column on) vs the angular frequencies (1st column, in rad/ps)
-- `BTE.WP3`: weighted phase space available for three-phonon processes  (in ps<sup>4</sup>rad<sup>-4</sup> , 2nd column) vs angular frequency (in rad/ps, 1st column) for those modes (q index changes first, and then band index) in the irreducible wedge. See [Phys. Rev. B 91, 144304 (2015)] for definition of weighted phase space.
-- `BTE.WP3_plus`: WP3 contributed by phonon absorption processes alone
-- `BTE.WP3_minus`: WP3 contributed by phonon emission processes alone
+- `BTE.P3`: volume in phase space available for three-phonon processes, for each irreducible q point and phonon band
+- `BTE.P3_total`: sum of all the contributions in `BTE.P3`, total volume in phase space available for three-phonon processes
+- `BTE.P3_plus*`, `BTE.P3_minus*`: equivalents of `BTE.P3` and `BTE.P3_total`, but including only contributions from emission (minus) or absorption (plus) processes
 - `BTE.gruneisen`: Grüneisen parameter for each irreducible q point and phonon band
 - `BTE.cvVsT`: specific heat of the system, in J/\(m<sup>3</sup> K) as a function of T (1st column)
 - `BTE.gruneisenVsT_total`: total Grüneisen parameter obtained as a weighted sum of the mode contributions as a function of T (1st column)
@@ -162,6 +163,9 @@ Under temperature-dependent directories:
 - `BTE.cv`: specific heat of the system, in J/\(m<sup>3</sup> K)
 - `BTE.kappa_sg`: thermal conductivity per unit of mean free path in the small-grain limit, in W/(m K nm)
 - `BTE.gruneisen_total`: total Grüneisen parameter obtained as a weighted sum of the mode contributions
+- `BTE.WP3`: weighted phase space available for three-phonon processes  (in ps<sup>4</sup>rad<sup>-4</sup> , 2nd column) vs angular frequency (in rad/ps, 1st column) for those modes (q index changes first, and then band index) in the irreducible wedge. See [Phys. Rev. B 91, 144304 (2015)] for definition of weighted phase space.
+- `BTE.WP3_plus`: WP3 contributed by phonon absorption processes alone
+- `BTE.WP3_minus`: WP3 contributed by phonon emission processes alone
 - `BTE.w_anharmonic`: contribution of three-phonon processes to the scattering rate, for each q point and each band, in ps<sup>-1</sup>
 - `BTE.w`: total zeroth-order scattering rate for each q point and each band, in ps<sup>-1</sup>
 - `BTE.w_final`: total converged scattering rate for each irreducible q point and each band, in ps<sup>-1</sup>
