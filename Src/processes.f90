@@ -304,7 +304,7 @@ contains
   subroutine Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
        Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
-       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,WP3_plus,WP3_minus)
+       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,rate_scatt_plus,rate_scatt_minus,WP3_plus,WP3_minus)
     implicit none
 
     include "mpif.h"
@@ -330,7 +330,7 @@ contains
     integer(kind=4),intent(out) :: Indof2ndPhonon_minus(:)
     integer(kind=4),intent(out) :: Indof3rdPhonon_minus(:)
     real(kind=8),intent(out) :: Gamma_minus(:)
-    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist)
+    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist),rate_scatt_plus(Nbands,Nlist),rate_scatt_minus(Nbands,Nlist)
     real(kind=8),intent(out) :: WP3_plus(Nbands,Nlist)
     real(kind=8),intent(out) :: WP3_minus(Nbands,Nlist)
 
@@ -348,7 +348,7 @@ contains
     integer(kind=4),allocatable :: Indof3rdPhonon_plus_reduce(:)
     integer(kind=4),allocatable :: Indof2ndPhonon_minus_reduce(:)
     integer(kind=4),allocatable :: Indof3rdPhonon_minus_reduce(:)
-    real(kind=8) :: rate_scatt_reduce(Nbands,Nlist)
+    real(kind=8) :: rate_scatt_plus_reduce(Nbands,Nlist),rate_scatt_minus_reduce(Nbands,Nlist)
     real(kind=8),allocatable :: Gamma0(:)
     real(kind=8),allocatable :: Gamma_plus_reduce(:)
     real(kind=8),allocatable :: Gamma_minus_reduce(:)
@@ -382,7 +382,8 @@ contains
     Indof3rdPhonon_minus_reduce=0
     Gamma_plus_reduce=0.d0
     Gamma_minus_reduce=0.d0
-    rate_scatt_reduce=0.d0
+    rate_scatt_plus_reduce=0.d0
+    rate_scatt_minus_reduce=0.d0
     WP3_plus=0.d0
     WP3_minus=0.d0
     WP3_plus_reduce=0.d0
@@ -402,7 +403,7 @@ contains
                Indof3rdPhonon(1:N_plus(mm))
           Gamma_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=&
                Gamma0(1:N_plus(mm))
-          rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma0(1:N_plus(mm)))
+          rate_scatt_plus_reduce(i,ll)=sum(Gamma0(1:N_plus(mm)))
        end if
        if(N_minus(mm).ne.0) then
           call Ind_minus(mm,N_minus(mm),energy,velocity,eigenvect,Nlist,List,&
@@ -415,7 +416,7 @@ contains
                Indof3rdPhonon(1:N_minus(mm))
           Gamma_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=&
                Gamma0(1:N_minus(mm))
-          rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma0(1:N_minus(mm)))*5.D-1
+          rate_scatt_minus_reduce(i,ll)=sum(Gamma0(1:N_minus(mm)))*5.D-1
        end if
     end do
 
@@ -435,12 +436,15 @@ contains
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ll)
     call MPI_ALLREDUCE(Gamma_minus_reduce,Gamma_minus,Ntotal_minus,&
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ll)
-    call MPI_ALLREDUCE(rate_scatt_reduce,rate_scatt,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+    call MPI_ALLREDUCE(rate_scatt_plus_reduce,rate_scatt_plus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(rate_scatt_minus_reduce,rate_scatt_minus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
          MPI_SUM,MPI_COMM_WORLD,ll)
     call MPI_ALLREDUCE(WP3_plus_reduce,WP3_plus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
          MPI_SUM,MPI_COMM_WORLD,ll)
     call MPI_ALLREDUCE(WP3_minus_reduce,WP3_minus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
          MPI_SUM,MPI_COMM_WORLD,ll)
+    rate_scatt=rate_scatt_plus+rate_scatt_minus
 
     deallocate(Indof2ndPhonon_plus_reduce)
     deallocate(Indof3rdPhonon_plus_reduce)
@@ -767,7 +771,7 @@ contains
 
   ! Wrapper around RTA_plus and RTA_minus that splits the work among processors.
   subroutine RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
-       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,WP3_plus,WP3_minus)
+       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,rate_scatt_plus,rate_scatt_minus,WP3_plus,WP3_minus)
     implicit none
 
     include "mpif.h"
@@ -785,7 +789,7 @@ contains
     integer(kind=4),intent(in) :: Index_i(Ntri)
     integer(kind=4),intent(in) :: Index_j(Ntri)
     integer(kind=4),intent(in) :: Index_k(Ntri)
-    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist)
+    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist),rate_scatt_plus(Nbands,Nlist),rate_scatt_minus(Nbands,Nlist)
     real(kind=8),intent(out) :: WP3_plus(Nbands,Nlist)
     real(kind=8),intent(out) :: WP3_minus(Nbands,Nlist)
 
@@ -793,12 +797,13 @@ contains
     integer(kind=4) :: ll
     integer(kind=4) :: mm
     real(kind=8) :: Gamma_plus,Gamma_minus
-    real(kind=8) :: rate_scatt_reduce(Nbands,Nlist)
+    real(kind=8) :: rate_scatt_plus_reduce(Nbands,Nlist),rate_scatt_minus_reduce(Nbands,Nlist)
     real(kind=8) :: WP3_plus_reduce(Nbands*Nlist)
     real(kind=8) :: WP3_minus_reduce(Nbands*Nlist)
 
     rate_scatt=0.d00
-    rate_scatt_reduce=0.d00
+    rate_scatt_plus_reduce=0.d00
+    rate_scatt_minus_reduce=0.d00
     WP3_plus=0.d00
     WP3_minus=0.d00
     WP3_plus_reduce=0.d00
@@ -810,18 +815,21 @@ contains
        call RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
             Gamma_plus,WP3_plus_reduce(mm))
-       rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+Gamma_plus
+       rate_scatt_plus_reduce(i,ll)=Gamma_plus
        call RTA_minus(mm,energy,velocity,eigenvect,Nlist,List,&
             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
             Gamma_minus,WP3_minus_reduce(mm))
-       rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+Gamma_minus*5.D-1
+       rate_scatt_minus_reduce(i,ll)=Gamma_minus*5.D-1
     end do
 
-    call MPI_ALLREDUCE(rate_scatt_reduce,rate_scatt,Nbands*Nlist,&
+    call MPI_ALLREDUCE(rate_scatt_plus_reduce,rate_scatt_plus,Nbands*Nlist,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(rate_scatt_minus_reduce,rate_scatt_minus,Nbands*Nlist,&
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
     call MPI_ALLREDUCE(WP3_plus_reduce,WP3_plus,Nbands*Nlist,&
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
     call MPI_ALLREDUCE(WP3_minus_reduce,WP3_minus,Nbands*Nlist,&
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+    rate_scatt=rate_scatt_plus+rate_scatt_minus
   end subroutine RTA_driver
 end module processes

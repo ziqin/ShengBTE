@@ -43,7 +43,7 @@ program ShengBTE
 
   real(kind=8),allocatable :: grun(:,:)
 
-  real(kind=8),allocatable :: rate_scatt(:,:)
+  real(kind=8),allocatable :: rate_scatt(:,:),rate_scatt_plus(:,:),rate_scatt_minus(:,:)
   real(kind=8),allocatable :: tau_zero(:,:),tau(:,:),tau_b(:,:),tau2(:,:),tau_b2(:,:)
   real(kind=8),allocatable :: dos(:),pdos(:,:),rate_scatt_isotope(:,:)
   real(kind=8),allocatable :: F_n(:,:,:),F_n_0(:,:,:),F_n_aux(:,:)
@@ -286,10 +286,14 @@ program ShengBTE
   end if
 
   allocate(rate_scatt(Nbands,Nlist))
+  allocate(rate_scatt_plus(Nbands,Nlist))
+  allocate(rate_scatt_minus(Nbands,Nlist))
   allocate(tau_zero(Nbands,Nlist))
   allocate(tau(Nbands,Nlist))
   allocate(tau2(Nbands,nptk))
   rate_scatt=0.d0
+  rate_scatt_plus=0.d0
+  rate_scatt_minus=0.d0
   allocate(radnw_range(nwires))
   do ii=1,nwires
      radnw_range(ii)=rmin+(ii-1.0)*dr
@@ -423,10 +427,10 @@ program ShengBTE
         call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
              Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
              Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
-             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,Pspace_plus_total,Pspace_minus_total)
+             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
      else
         call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
-             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,Pspace_plus_total,Pspace_minus_total)
+             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
      end if
 
      if(myid.eq.0) then
@@ -456,12 +460,18 @@ program ShengBTE
      write(aux,"(I0)") Nbands
      if(myid.eq.0) then
         open(1,file="BTE.w_anharmonic",status="replace")
+        open(2,file="BTE.w_anharmonic_plus",status="replace")
+        open(3,file="BTE.w_anharmonic_minus",status="replace")
         do i=1,Nbands
            do ll=1,Nlist
               write(1,"(2E20.10)") energy(list(ll),i),rate_scatt(i,ll)
+              write(2,"(2E20.10)") energy(list(ll),i),rate_scatt_plus(i,ll)
+              write(3,"(2E20.10)") energy(list(ll),i),rate_scatt_minus(i,ll)
            enddo
         end do
         close(1)
+        close(2)
+        close(3)
      end if
 
      ! Obtain the total scattering rates in the relaxation time approximation.
