@@ -273,7 +273,12 @@ program ShengBTE
 
 
   allocate(rate_scatt_isotope(Nbands,Nlist))
-  if (isotopes) call calc_isotopescatt(energy,velocity,eigenvect,nlist,list,rate_scatt_isotope)
+  if (isotopes) then
+     call calc_isotopescatt(energy,velocity,eigenvect,nlist,list,&
+          rate_scatt_isotope)
+  else
+     rate_scatt_isotope=0.d00
+  end if
 
   if(myid.eq.0) then
      write(aux,"(I0)") Nbands
@@ -365,7 +370,8 @@ program ShengBTE
         call change_directory(trim(adjustl(path))//C_NULL_CHAR)
      endif
      call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
-             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
+          Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,&
+          rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
      if(myid.eq.0) then
         open(1,file="BTE.WP3_plus",status="replace")
         do i=1,Nbands
@@ -384,7 +390,8 @@ program ShengBTE
         open(1,file="BTE.WP3",status="replace")
         do i=1,Nbands
            do ll=1,Nlist
-              write(1,"(2E14.5)") energy(list(ll),i),Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
+              write(1,"(2E14.5)") energy(list(ll),i),&
+                   Pspace_plus_total(i,ll)+Pspace_minus_total(i,ll)
            enddo
         end do
         close(1)
@@ -469,10 +476,12 @@ program ShengBTE
         call Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
              Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
              Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
-             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
+             Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,&
+             rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
      else
         call RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
-             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,rate_scatt_plus,rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
+             Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,rate_scatt_plus,&
+             rate_scatt_minus,Pspace_plus_total,Pspace_minus_total)
      end if
 
      if(myid.eq.0) then
