@@ -140,7 +140,7 @@ contains
   ! Scattering amplitudes of absorption processes.
   subroutine Ind_plus(mm,N_plus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-       Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus)
+       Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,WP3_plus)
     implicit none
 
     integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk),N_plus,Ntri
@@ -149,7 +149,7 @@ contains
     real(kind=8),intent(in) :: Phi(3,3,3,Ntri),R_j(3,Ntri),R_k(3,Ntri)
     complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
     integer(kind=4),intent(out) :: Indof2ndPhonon_plus(N_plus),Indof3rdPhonon_plus(N_plus)
-    real(kind=8),intent(out) :: Gamma_plus(N_plus)
+    real(kind=8),intent(out) :: Gamma_plus(N_plus),WP3_plus
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_plus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
@@ -158,6 +158,7 @@ contains
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
+    real(kind=8) :: WP3
     complex(kind=8) :: Vp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
@@ -168,6 +169,7 @@ contains
        end do
     end do
     N_plus_count=0
+    WP3_plus=0.d0
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
@@ -200,9 +202,11 @@ contains
                       Vp=Vp_plus(i,j,k,list(ll),ii,ss,&
                            realqprime,realqdprime,eigenvect,&
                            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
-                      Gamma_plus(N_plus_count)=hbarp*pi/4.d0*(fBEprime-fBEdprime)*&
+                      WP3=(fBEprime-fBEdprime)*&
                            exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
-                           (omega*omegap*omegadp)*abs(Vp)**2
+                           (omega*omegap*omegadp)
+                      WP3_plus=WP3_plus+WP3
+                      Gamma_plus(N_plus_count)=hbarp*pi/4.d0*WP3*abs(Vp)**2
                       ! At this point, Gamma's units are
                       ! (1.d-34J*s)*(1.d12/s)^(-4)*1amu^(-3)*(ev/angstrom**3)^2,
                       ! that is, 5.60626442*1.d8 THz
@@ -213,13 +217,14 @@ contains
              !--------END absorption process-------------!
           end do ! ii
        end do  ! j
+       WP3_plus=WP3_plus/nptk
     end if
   end subroutine Ind_plus
 
   ! Scattering amplitudes of emission processes. See Ind_plus() for details.
   subroutine Ind_minus(mm,N_minus,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus)
+       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,WP3_minus)
     implicit none
 
     integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk),N_minus,Ntri
@@ -228,7 +233,7 @@ contains
     real(kind=8),intent(in) :: Phi(3,3,3,Ntri),R_j(3,Ntri),R_k(3,Ntri)
     complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
     integer(kind=4),intent(out) :: Indof2ndPhonon_minus(N_minus),Indof3rdPhonon_minus(N_minus)
-    real(kind=8),intent(out) :: Gamma_minus(N_minus)
+    real(kind=8),intent(out) :: Gamma_minus(N_minus),WP3_minus
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
@@ -237,6 +242,7 @@ contains
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) ::  omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
+    real(kind=8) :: WP3
     complex(kind=8) :: Vp
 
     do ii=0,Ngrid(1)-1        ! G1 direction
@@ -247,6 +253,7 @@ contains
        end do
     end do
     N_minus_count=0
+    WP3_minus=0.d0
     i=modulo(mm-1,Nbands)+1
     ll=int((mm-1)/Nbands)+1
     q=IJK(:,list(ll))
@@ -277,9 +284,11 @@ contains
                       Vp=Vp_minus(i,j,k,list(ll),ii,ss,&
                            realqprime,realqdprime,eigenvect,&
                            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
-                      Gamma_minus(N_minus_count)=hbarp*pi/4.d0*(fBEprime+fBEdprime+1)*&
+                      WP3=(fBEprime+fBEdprime+1)*&
                            exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
-                           (omega*omegap*omegadp)*abs(Vp)**2
+                           (omega*omegap*omegadp)
+                      WP3_minus=WP3_minus+WP3
+                      Gamma_minus(N_minus_count)=hbarp*pi/4.d0*WP3*abs(Vp)**2
                       Gamma_minus(N_minus_count)=Gamma_minus(N_minus_count)*5.60626442*1.d8/nptk
                    end if
                 end if
@@ -287,6 +296,7 @@ contains
              !--------END emission process-------------
           end do ! ii
        end do  ! j
+       WP3_minus=WP3_minus*5.d-1/nptk
     end if
   end subroutine Ind_minus
 
@@ -294,7 +304,7 @@ contains
   subroutine Ind_driver(energy,velocity,eigenvect,Nlist,List,IJK,N_plus,N_minus,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,&
        Indof2ndPhonon_plus,Indof3rdPhonon_plus,Gamma_plus,&
-       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt)
+       Indof2ndPhonon_minus,Indof3rdPhonon_minus,Gamma_minus,rate_scatt,rate_scatt_plus,rate_scatt_minus,WP3_plus,WP3_minus)
     implicit none
 
     include "mpif.h"
@@ -320,7 +330,9 @@ contains
     integer(kind=4),intent(out) :: Indof2ndPhonon_minus(:)
     integer(kind=4),intent(out) :: Indof3rdPhonon_minus(:)
     real(kind=8),intent(out) :: Gamma_minus(:)
-    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist)
+    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist),rate_scatt_plus(Nbands,Nlist),rate_scatt_minus(Nbands,Nlist)
+    real(kind=8),intent(out) :: WP3_plus(Nbands,Nlist)
+    real(kind=8),intent(out) :: WP3_minus(Nbands,Nlist)
 
     integer(kind=4) :: i
     integer(kind=4) :: ll
@@ -336,10 +348,12 @@ contains
     integer(kind=4),allocatable :: Indof3rdPhonon_plus_reduce(:)
     integer(kind=4),allocatable :: Indof2ndPhonon_minus_reduce(:)
     integer(kind=4),allocatable :: Indof3rdPhonon_minus_reduce(:)
-    real(kind=8) :: rate_scatt_reduce(Nbands,Nlist)
+    real(kind=8) :: rate_scatt_plus_reduce(Nbands,Nlist),rate_scatt_minus_reduce(Nbands,Nlist)
     real(kind=8),allocatable :: Gamma0(:)
     real(kind=8),allocatable :: Gamma_plus_reduce(:)
     real(kind=8),allocatable :: Gamma_minus_reduce(:)
+    real(kind=8) :: WP3_plus_reduce(Nbands*Nlist)
+    real(kind=8) :: WP3_minus_reduce(Nbands*Nlist)
 
     maxsize=max(maxval(N_plus),maxval(N_minus))
     allocate(Indof2ndPhonon(maxsize))
@@ -368,7 +382,12 @@ contains
     Indof3rdPhonon_minus_reduce=0
     Gamma_plus_reduce=0.d0
     Gamma_minus_reduce=0.d0
-    rate_scatt_reduce=0.d0
+    rate_scatt_plus_reduce=0.d0
+    rate_scatt_minus_reduce=0.d0
+    WP3_plus=0.d0
+    WP3_minus=0.d0
+    WP3_plus_reduce=0.d0
+    WP3_minus_reduce=0.d0
 
     do mm=myid+1,Nbands*NList,numprocs
        i=modulo(mm-1,Nbands)+1
@@ -377,27 +396,27 @@ contains
           call Ind_plus(mm,N_plus(mm),energy,velocity,eigenvect,Nlist,List,&
                Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
                Indof2ndPhonon(1:N_plus(mm)),Indof3rdPhonon(1:N_plus(mm)),&
-               Gamma0(1:N_plus(mm)))
+               Gamma0(1:N_plus(mm)),WP3_plus_reduce(mm))
           Indof2ndPhonon_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=&
                Indof2ndPhonon(1:N_plus(mm))
           Indof3rdPhonon_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=&
                Indof3rdPhonon(1:N_plus(mm))
           Gamma_plus_reduce((Naccum_plus(mm)+1):(Naccum_plus(mm)+N_plus(mm)))=&
                Gamma0(1:N_plus(mm))
-          rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma0(1:N_plus(mm)))
+          rate_scatt_plus_reduce(i,ll)=sum(Gamma0(1:N_plus(mm)))
        end if
        if(N_minus(mm).ne.0) then
           call Ind_minus(mm,N_minus(mm),energy,velocity,eigenvect,Nlist,List,&
                Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
                Indof2ndPhonon(1:N_minus(mm)),Indof3rdPhonon(1:N_minus(mm)),&
-               Gamma0(1:N_minus(mm)))
+               Gamma0(1:N_minus(mm)),WP3_minus_reduce(mm))
           Indof2ndPhonon_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=&
                Indof2ndPhonon(1:N_minus(mm))
           Indof3rdPhonon_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=&
                Indof3rdPhonon(1:N_minus(mm))
           Gamma_minus_reduce((Naccum_minus(mm)+1):(Naccum_minus(mm)+N_minus(mm)))=&
                Gamma0(1:N_minus(mm))
-          rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+sum(Gamma0(1:N_minus(mm)))*5.D-1
+          rate_scatt_minus_reduce(i,ll)=sum(Gamma0(1:N_minus(mm)))*5.D-1
        end if
     end do
 
@@ -417,8 +436,15 @@ contains
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ll)
     call MPI_ALLREDUCE(Gamma_minus_reduce,Gamma_minus,Ntotal_minus,&
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ll)
-    call MPI_ALLREDUCE(rate_scatt_reduce,rate_scatt,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+    call MPI_ALLREDUCE(rate_scatt_plus_reduce,rate_scatt_plus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
          MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(rate_scatt_minus_reduce,rate_scatt_minus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(WP3_plus_reduce,WP3_plus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ll)
+    call MPI_ALLREDUCE(WP3_minus_reduce,WP3_minus,Nbands*Nlist,MPI_DOUBLE_PRECISION,&
+         MPI_SUM,MPI_COMM_WORLD,ll)
+    rate_scatt=rate_scatt_plus+rate_scatt_minus
 
     deallocate(Indof2ndPhonon_plus_reduce)
     deallocate(Indof3rdPhonon_plus_reduce)
@@ -576,10 +602,12 @@ contains
     N_minus_reduce=0
 
     do mm=myid+1,Nbands*Nlist,numprocs
-       call NP_plus(mm,energy,velocity,Nlist,List,IJK,&
-            N_plus_reduce(mm),Pspace_plus_reduce(mm))
-       call NP_minus(mm,energy,velocity,Nlist,List,IJK,&
-            N_minus_reduce(mm),Pspace_minus_reduce(mm))
+       if (energy(List(int((mm-1)/Nbands)+1),modulo(mm-1,Nbands)+1).le.omega_max) then
+          call NP_plus(mm,energy,velocity,Nlist,List,IJK,&
+               N_plus_reduce(mm),Pspace_plus_reduce(mm))
+          call NP_minus(mm,energy,velocity,Nlist,List,IJK,&
+               N_minus_reduce(mm),Pspace_minus_reduce(mm))
+       endif
     end do
 
     call MPI_ALLREDUCE(N_plus_reduce,N_plus,Nbands*Nlist,MPI_INTEGER,&
@@ -595,7 +623,7 @@ contains
   ! RTA-only version of Ind_plus.
   subroutine RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-       Gamma_plus)
+       Gamma_plus,WP3_plus)
     implicit none
 
     integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk),Ntri
@@ -603,7 +631,7 @@ contains
     real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
     real(kind=8),intent(in) :: Phi(3,3,3,Ntri),R_j(3,Ntri),R_k(3,Ntri)
     complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
-    real(kind=8),intent(out) :: Gamma_plus
+    real(kind=8),intent(out) :: Gamma_plus,WP3_plus
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
@@ -612,9 +640,11 @@ contains
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) :: omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
+    real(kind=8) :: WP3
     complex(kind=8) :: Vp
 
     Gamma_plus=0.d00
+    WP3_plus=0.d00
     do ii=0,Ngrid(1)-1
        do jj=0,Ngrid(2)-1
           do kk=0,Ngrid(3)-1
@@ -646,18 +676,23 @@ contains
                         velocity(ss,k,:))
                    if(abs(omega+omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
+                      WP3=(fBEprime-fBEdprime)*&
+                           exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
+                           (omega*omegap*omegadp)
+                      WP3_plus=WP3_plus+WP3
+                      if (.not.onlyharmonic) then
                       Vp=Vp_plus(i,j,k,list(ll),ii,ss,&
                            realqprime,realqdprime,eigenvect,&
                            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
-                      Gamma_plus=Gamma_plus+hbarp*pi/4.d0*(fBEprime-fBEdprime)*&
-                           exp(-(omega+omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
-                           (omega*omegap*omegadp)*abs(Vp)**2
+                      Gamma_plus=Gamma_plus+hbarp*pi/4.d0*WP3*abs(Vp)**2
+                      endif
                    end if
                 end if
              end do ! k
              !--------END absorption process-------------!
           end do ! ii
        end do  ! j
+       WP3_plus=WP3_plus/nptk
     end if
     Gamma_plus=Gamma_plus*5.60626442*1.d8/nptk ! THz
   end subroutine RTA_plus
@@ -665,7 +700,7 @@ contains
   ! RTA-only version of Ind_minus.
   subroutine RTA_minus(mm,energy,velocity,eigenvect,Nlist,List,&
        Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-       Gamma_minus)
+       Gamma_minus,WP3_minus)
     implicit none
 
     integer(kind=4),intent(in) :: mm,NList,List(Nlist),IJK(3,nptk),Ntri
@@ -673,7 +708,7 @@ contains
     real(kind=8),intent(in) :: energy(nptk,Nbands),velocity(nptk,Nbands,3)
     real(kind=8),intent(in) :: Phi(3,3,3,Ntri),R_j(3,Ntri),R_k(3,Ntri)
     complex(kind=8),intent(in) :: eigenvect(nptk,Nbands,Nbands)
-    real(kind=8),intent(out) :: Gamma_minus
+    real(kind=8),intent(out) :: Gamma_minus,WP3_minus
 
     integer(kind=4) :: q(3),qprime(3),qdprime(3),i,j,k,N_minus_count
     integer(kind=4) :: Index_N(0:(Ngrid(1)-1),0:(Ngrid(2)-1),0:(Ngrid(3)-1))
@@ -682,9 +717,11 @@ contains
     real(kind=8) :: fBEprime,fBEdprime
     real(kind=8) ::  omega,omegap,omegadp
     real(kind=8) :: realqprime(3),realqdprime(3)
+    real(kind=8) :: WP3
     complex(kind=8) :: Vp
 
     Gamma_minus=0.d00
+    WP3_minus=0.d00
     do ii=0,Ngrid(1)-1
        do jj=0,Ngrid(2)-1
           do kk=0,Ngrid(3)-1
@@ -717,25 +754,30 @@ contains
                         velocity(ss,k,:))
                    if (abs(omega-omegap-omegadp).le.(2.d0*sigma)) then
                       fBEdprime=1.d0/(exp(hbar*omegadp/Kb/T)-1.D0)
+                      WP3=(fBEprime+fBEdprime+1)*&
+                           exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
+                           (omega*omegap*omegadp)
+                      WP3_minus=WP3_minus+WP3
+                      if (.not.onlyharmonic) then
                       Vp=Vp_minus(i,j,k,list(ll),ii,ss,&
                            realqprime,realqdprime,eigenvect,&
                            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k)
-                      Gamma_minus=Gamma_minus+hbarp*pi/4.d0*(fBEprime+fBEdprime+1)*&
-                           exp(-(omega-omegap-omegadp)**2/(sigma**2))/sigma/sqrt(Pi)/&
-                           (omega*omegap*omegadp)*abs(Vp)**2
+                      Gamma_minus=Gamma_minus+hbarp*pi/4.d0*WP3*abs(Vp)**2
+                      endif
                    end if
                 end if
              end do ! k
              !--------END emission process-------------
           end do ! ii
        end do  ! j
+       WP3_minus=WP3_minus*5.d-1/nptk
     end if
     Gamma_minus=Gamma_minus*5.60626442*1.d8/nptk
   end subroutine RTA_minus
 
   ! Wrapper around RTA_plus and RTA_minus that splits the work among processors.
   subroutine RTA_driver(energy,velocity,eigenvect,Nlist,List,IJK,&
-       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt)
+       Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,rate_scatt,rate_scatt_plus,rate_scatt_minus,WP3_plus,WP3_minus)
     implicit none
 
     include "mpif.h"
@@ -753,31 +795,49 @@ contains
     integer(kind=4),intent(in) :: Index_i(Ntri)
     integer(kind=4),intent(in) :: Index_j(Ntri)
     integer(kind=4),intent(in) :: Index_k(Ntri)
-    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist)
+    real(kind=8),intent(out) :: rate_scatt(Nbands,Nlist),rate_scatt_plus(Nbands,Nlist),rate_scatt_minus(Nbands,Nlist)
+    real(kind=8),intent(out) :: WP3_plus(Nbands,Nlist)
+    real(kind=8),intent(out) :: WP3_minus(Nbands,Nlist)
 
     integer(kind=4) :: i
     integer(kind=4) :: ll
     integer(kind=4) :: mm
     real(kind=8) :: Gamma_plus,Gamma_minus
-    real(kind=8) :: rate_scatt_reduce(Nbands,Nlist)
+    real(kind=8) :: rate_scatt_plus_reduce(Nbands,Nlist),rate_scatt_minus_reduce(Nbands,Nlist)
+    real(kind=8) :: WP3_plus_reduce(Nbands*Nlist)
+    real(kind=8) :: WP3_minus_reduce(Nbands*Nlist)
 
     rate_scatt=0.d00
-    rate_scatt_reduce=0.d00
+    rate_scatt_plus_reduce=0.d00
+    rate_scatt_minus_reduce=0.d00
+    WP3_plus=0.d00
+    WP3_minus=0.d00
+    WP3_plus_reduce=0.d00
+    WP3_minus_reduce=0.d00
 
     do mm=myid+1,Nbands*NList,numprocs
        i=modulo(mm-1,Nbands)+1
        ll=int((mm-1)/Nbands)+1
-       call RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
-            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-            Gamma_plus)
-       rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+Gamma_plus
-       call RTA_minus(mm,energy,velocity,eigenvect,Nlist,List,&
-            Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
-            Gamma_minus)
-       rate_scatt_reduce(i,ll)=rate_scatt_reduce(i,ll)+Gamma_minus*5.D-1
+       if (energy(List(ll),i).le.omega_max) then
+          call RTA_plus(mm,energy,velocity,eigenvect,Nlist,List,&
+               Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+               Gamma_plus,WP3_plus_reduce(mm))
+          rate_scatt_plus_reduce(i,ll)=Gamma_plus
+          call RTA_minus(mm,energy,velocity,eigenvect,Nlist,List,&
+               Ntri,Phi,R_j,R_k,Index_i,Index_j,Index_k,IJK,&
+               Gamma_minus,WP3_minus_reduce(mm))
+          rate_scatt_minus_reduce(i,ll)=Gamma_minus*5.D-1
+       endif
     end do
 
-    call MPI_ALLREDUCE(rate_scatt_reduce,rate_scatt,Nbands*Nlist,&
+    call MPI_ALLREDUCE(rate_scatt_plus_reduce,rate_scatt_plus,Nbands*Nlist,&
          MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(rate_scatt_minus_reduce,rate_scatt_minus,Nbands*Nlist,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(WP3_plus_reduce,WP3_plus,Nbands*Nlist,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+    call MPI_ALLREDUCE(WP3_minus_reduce,WP3_minus,Nbands*Nlist,&
+         MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,mm)
+    rate_scatt=rate_scatt_plus+rate_scatt_minus
   end subroutine RTA_driver
 end module processes

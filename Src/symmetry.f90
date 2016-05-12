@@ -121,11 +121,11 @@ contains
     ctranslations=matmul(lattice,translations)
     do i=1,nops
        tmp1=transpose(lattice)
-       tmp2=transpose(rotations(:,:,i))
+       tmp2=transpose(matmul(lattice,rotations(:,:,i)))
        ! Rotations transform as tensors: both the lattice-vector matrix
        ! and its inverse are needed. Explicit inversions are avoided.
        call dgesv(3,3,tmp1,3,P,tmp2,3,info)
-       crotations(:,:,i)=transpose(matmul(tmp2,transpose(lattice)))
+       crotations(:,:,i)=transpose(tmp2)
     end do
   end subroutine get_cartesian_operations
 end module symmetry
