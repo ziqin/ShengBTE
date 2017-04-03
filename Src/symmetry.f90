@@ -1,8 +1,8 @@
 !  ShengBTE, a solver for the Boltzmann Transport Equation for phonons
-!  Copyright (C) 2012-2015 Wu Li <wu.li.phys2011@gmail.com>
-!  Copyright (C) 2012-2015 Jesús Carrete Montaña <jcarrete@gmail.com>
-!  Copyright (C) 2012-2015 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
-!  Copyright (C) 2012-2015 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
+!  Copyright (C) 2012-2017 Wu Li <wu.li.phys2011@gmail.com>
+!  Copyright (C) 2012-2017 Jesús Carrete Montaña <jcarrete@gmail.com>
+!  Copyright (C) 2012-2017 Nebil Ayape Katcho <nebil.ayapekatcho@cea.fr>
+!  Copyright (C) 2012-2017 Natalio Mingo Bisquert <natalio.mingo@cea.fr>
 !
 !  This program is free software: you can redistribute it and/or modify
 !  it under the terms of the GNU General Public License as published by
@@ -25,8 +25,45 @@ module symmetry
   ! Tolerance parameter passed to spglib.
   real(kind=C_DOUBLE),parameter :: symprec=1d-5
 
+  ! Explicit interfaces to spglib.
+  interface
+     function spg_get_symmetry(rotations,translations,nops,lattice,&
+          positions,types,natoms,symprec) bind (C, name="spg_get_symmetry")
+       use iso_c_binding
+       integer(kind=C_INT) :: spg_get_symmetry
+       integer(kind=C_INT),dimension(3,3,nops) :: rotations
+       real(kind=C_DOUBLE),dimension(3,nops) :: translations
+       integer(kind=C_INT),value :: nops
+       real(kind=C_DOUBLE),dimension(3,3) :: lattice
+       real(kind=C_DOUBLE),dimension(3,natoms) :: positions
+       integer(kind=C_INT),dimension(natoms) :: types
+       integer(kind=C_INT),value :: natoms
+       real(kind=C_DOUBLE),value :: symprec
+     end function spg_get_symmetry
+     function spg_get_international(symbol,lattice,&
+          positions,types,natoms,symprec) bind (C, name="spg_get_international")
+       use iso_c_binding
+       integer(kind=C_INT) :: spg_get_international
+       character(kind=C_CHAR),dimension(11) :: symbol
+       real(kind=C_DOUBLE),dimension(3,3) :: lattice
+       real(kind=C_DOUBLE),dimension(3,natoms) :: positions
+       integer(kind=C_INT),dimension(natoms) :: types
+       integer(kind=C_INT),value :: natoms
+       real(kind=C_DOUBLE),value :: symprec
+     end function spg_get_international
+     function spg_get_multiplicity(lattice,&
+          positions,types,natoms,symprec) bind (C, name="spg_get_multiplicity")
+       use iso_c_binding
+       integer(kind=C_INT) :: spg_get_multiplicity
+       real(kind=C_DOUBLE),dimension(3,3) :: lattice
+       real(kind=C_DOUBLE),dimension(3,natoms) :: positions
+       integer(kind=C_INT),dimension(natoms) :: types
+       integer(kind=C_INT),value :: natoms
+       real(kind=C_DOUBLE),value :: symprec
+     end function spg_get_multiplicity
+  end interface
 contains
-
+  
   ! Return the number of symmetry operations. Useful for allocating
   ! memory for get_operations().
   function get_num_operations(lattice,natoms,types,positions)
@@ -52,8 +89,8 @@ contains
     ctypes=types
     cpositions=positions
 
-    call spg_get_multiplicity(num,clattice,&
-         cpositions,ctypes,cnatoms,symprec)
+    num=spg_get_multiplicity(clattice,cpositions,ctypes,&
+         cnatoms,symprec)
     get_num_operations=num
   end function get_num_operations
 
@@ -71,7 +108,8 @@ contains
     real(kind=8),dimension(3,nops),intent(out) :: translations
     character(len=10),intent(out) :: international
 
-    integer(kind=C_INT) ::  newnops,i
+    integer(kind=C_INT) :: i
+    integer(kind=C_INT) ::  newnops
     real(kind=C_DOUBLE),dimension(3,3) :: clattice
     integer(kind=C_INT) :: cnatoms
     integer(kind=C_INT),dimension(natoms) :: ctypes
@@ -89,10 +127,10 @@ contains
 
     ! If nops changes value, something went wrong. Checking
     ! this condition is up to the user.
-    call spg_get_symmetry(newnops,crotations,ctranslations,cnops,&
+    newnops = spg_get_symmetry(crotations,ctranslations,cnops,&
          clattice,cpositions,ctypes,cnatoms,symprec)
-    call spg_get_international(i,intertmp,clattice,&
-         cpositions,ctypes,cnatoms,symprec)
+    i=spg_get_international(intertmp,clattice, cpositions,&
+         ctypes,cnatoms,symprec)
     international=intertmp(1:10)
     nops=newnops
     ! Transform from C to Fortran order.
