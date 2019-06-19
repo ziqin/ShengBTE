@@ -1,0 +1,9 @@
+export FFLAGS=-traceback -debug -O3 -ipo -xHost -static_intel -qopenmp
+export LDFLAGS=-lsymspg -qopenmp
+export MPIFC=mpiifort
+MKL=$(MKLROOT)/lib/intel64/libmkl_lapack95_lp64.a -Wl,--start-group	\
+$(MKLROOT)/lib/intel64/libmkl_intel_lp64.a				\
+ $(MKLROOT)/lib/intel64/libmkl_sequential.a				\
+ $(MKLROOT)/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm
+export LAPACK=$(MKL)
+export LIBS=$(LAPACK)

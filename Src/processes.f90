@@ -62,26 +62,35 @@ contains
     complex(kind=8) :: prefactor
     complex(kind=8) :: Vp0
 
+    integer(kind=4) :: ill
+    integer(kind=4) :: jll
+    integer(kind=4) :: kll
+
     Vp_plus=0.d0
     
+    !$OMP PARALLEL DO
     do ll=1,Ntri
        prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
             masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
             phexp(dot_product(realqprime,R_j(:,ll)))*&
             phexp(-dot_product(realqdprime,R_k(:,ll)))
+       ill = 3 * (Index_i(ll)-1)
+       jll = 3 * (Index_j(ll)-1)
+       kll = 3 * (Index_k(ll)-1)
        Vp0=0.d0
        do rr=1,3
           do ss=1,3
              do tt=1,3
                 Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                     eigenvect(q,i,tt+3*(Index_i(ll)-1))*&
-                     eigenvect(qprime,j,ss+3*(Index_j(ll)-1))*&
-                     conjg(eigenvect(qdprime,k,rr+3*(Index_k(ll)-1)))
+                     eigenvect(q,i,tt+ill)*&
+                     eigenvect(qprime,j,ss+jll)*&
+                     conjg(eigenvect(qdprime,k,rr+kll))
              end do
           end do
        end do
        Vp_plus=Vp_plus+prefactor*Vp0
     end do
+    !$OMP END PARALLEL DO
   end function Vp_plus
 
   ! Compute one of the matrix elements involved in the calculation of Ind_minus.
@@ -115,26 +124,35 @@ contains
     complex(kind=8) :: prefactor
     complex(kind=8) :: Vp0
 
+    integer(kind=4) :: ill
+    integer(kind=4) :: jll
+    integer(kind=4) :: kll
+
     Vp_minus=0.d0
 
+    !$OMP PARALLEL DO
     do ll=1,Ntri
        prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
             masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
             phexp(-dot_product(realqprime,R_j(:,ll)))*&
             phexp(-dot_product(realqdprime,R_k(:,ll)))
+       ill = 3 * (Index_i(ll)-1)
+       jll = 3 * (Index_j(ll)-1)
+       kll = 3 * (Index_k(ll)-1)
        Vp0=0.
        do rr=1,3
           do ss=1,3
              do tt=1,3
                 Vp0=Vp0+Phi(tt,ss,rr,ll)*&
-                     eigenvect(q,i,tt+3*(Index_i(ll)-1))*&
-                     conjg(eigenvect(qprime,j,ss+3*(Index_j(ll)-1)))*&
-                     conjg(eigenvect(qdprime,k,rr+3*(Index_k(ll)-1)))
+                     eigenvect(q,i,tt+ill)*&
+                     conjg(eigenvect(qprime,j,ss+jll))*&
+                     conjg(eigenvect(qdprime,k,rr+kll))
              end do
           end do
        end do
        Vp_minus=Vp_minus+prefactor*Vp0
     end do
+    !$OMP END PARALLEL DO
   end function Vp_minus
 
   ! Scattering amplitudes of absorption processes.
