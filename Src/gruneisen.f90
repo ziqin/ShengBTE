@@ -43,6 +43,7 @@ contains
     integer(kind=4) :: ik,ii,jj,kk,iband,itri,ialpha,ibeta
     real(kind=8) :: kspace(nptk,3)
     complex(kind=8) :: factor1,factor2,factor3,g(nbands)
+    complex(kind=8) :: g_tri, g_band  ! OpenMP auxiliary
 
     do ii=1,Ngrid(1)
        do jj=1,Ngrid(2)
@@ -57,22 +58,28 @@ contains
     do ik=1,nptk
        g=0.0
        do iband=1,nbands
+          g_band = 0
+          !$OMP PARALLEL DO REDUCTION(+:g_band)
           do itri=1,Ntri
+             g_tri = 0
              factor1=phexp(dot_product(kspace(ik,:),R_j(:,itri)))/&
                   sqrt(masses(types(Index_i(itri)))*&
                   masses(types(Index_j(itri))))
              do ialpha=1,3
                 factor2=factor1*conjg(eigenvect(ik,iband,&
-                     3*(Index_i(itri)-1)+ialpha))
+                     3*(Index_i(itri)-1)+ialpha))               
                 do ibeta=1,3
                    factor3=factor2*eigenvect(ik,iband,&
                         3*(Index_j(itri)-1)+ibeta)
-                   g(iband)=g(iband)+factor3*dot_product(&
+                   g_tri=g_tri+factor3*dot_product(&
                         Phi(ialpha,ibeta,:,itri),&
                         (cartesian(:,Index_k(itri))+R_k(:,itri)))
                 end do
              end do
+             g_band=g_band+g_tri
           end do
+          !$OMP END PARALLEL DO
+          g(iband)=g_band
        if (omega(ik,iband).eq.0) then
           grun(ik,iband)=0.d0
        else
