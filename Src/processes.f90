@@ -68,7 +68,7 @@ contains
 
     Vp_plus=0.d0
     
-    !$OMP PARALLEL DO
+    !$OMP PARALLEL DO REDUCTION(+:Vp_plus) PRIVATE(ill, jll, kll)
     do ll=1,Ntri
        prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
             masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
@@ -130,7 +130,7 @@ contains
 
     Vp_minus=0.d0
 
-    !$OMP PARALLEL DO
+    !$OMP PARALLEL DO REDUCTION(+:Vp_minus) PRIVATE(ill, jll, kll)
     do ll=1,Ntri
        prefactor=1.d0/sqrt(masses(types(Index_i(ll)))*&
             masses(types(Index_j(ll)))*masses(types(Index_k(ll))))*&
